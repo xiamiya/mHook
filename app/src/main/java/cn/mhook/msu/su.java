@@ -2,6 +2,7 @@ package cn.mhook.msu;
 
 import android.content.Context;
 import android.os.Looper;
+import android.util.Log;
 import com.tamsiree.rxkit.RxFileTool;
 import com.tamsiree.rxkit.view.RxToast;
 import java.io.File;
@@ -56,5 +57,19 @@ public class su {
                Cmd.builder("chmod -R 777 /data/mHook").execute(session);
             }
         }).start();
+    }
+
+    /** 同步执行一条 su 命令（阻塞到执行完），用于需要立即生效的目录创建/权限设置。 */
+    public static void exec(String cmd){
+        try {
+            Process p = Runtime.getRuntime().exec(new String[]{"su", "-c", cmd});
+            java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()));
+            while (r.readLine() != null) {
+                // drain
+            }
+            p.waitFor();
+        } catch (Throwable t) {
+            Log.e("su", "exec err: " + t.getMessage());
+        }
     }
 }

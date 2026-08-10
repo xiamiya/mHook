@@ -1,5 +1,19 @@
 # 更新日志
 
+## [1.4.7] - 2026-08-10
+
+### 优化
+- 内存脱壳重写读取策略：不再 hook `loadClass` 频繁扫内存（易触发加固崩溃），改为延迟后台枚举已加载 dex，按 `DexFile.mCookie` 的 begin/size 精确定位读取（BlackDex 思路）
+  - 对带反作弊加固的应用（如阿里 Ashield）也能完整 dump 出 dex（实测疯狂刷题 3 个 dex 全部落盘）
+- 脱壳界面新增 dex 保存位置提示：列表项常驻显示 `/data/mHook/<包名>/dump/`，开启弹窗与 Toast 同步提示
+
+### 修复
+- 内存脱壳新建 dump 目录权限为 700 导致目标进程无法写入：改为 su 创建即 777
+- 脱壳产物 dex 文件权限为 600 导致 mHook 无法读取：写入后置为 666 可读
+
+### 致谢
+- 「感谢开源项目」新增 dexlib2（JesusFreke）、Guava（Google）、BlackDex（CodingGay）
+
 ## [1.4.6] - 2026-08-10
 
 ### 新增

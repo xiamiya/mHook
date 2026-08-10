@@ -25,10 +25,17 @@ public class DumpAdapter extends BaseQuickAdapter<SelectAppItem, BaseViewHolder>
     @Override
     protected void convert(BaseViewHolder helper, SelectAppItem item) {
         helper.setText(R.id.item_name_tv, item.getAppName())
-                .setText(R.id.item_ver, item.getVer())
-                .setText(R.id.item_pkg, item.getPkg());
-        TextView gross = helper.getView(R.id.item_gross);
+                .setText(R.id.item_ver, item.getVer());
+        TextView pkgView = helper.getView(R.id.item_pkg);
         boolean on = new File(mDir + item.getPkg() + "/dump").exists();
+        if (on) {
+            pkgView.setText("dex 保存到：\n/data/mHook/" + item.getPkg() + "/dump/");
+            pkgView.setSingleLine(false);
+        } else {
+            pkgView.setText(item.getPkg());
+            pkgView.setSingleLine(true);
+        }
+        TextView gross = helper.getView(R.id.item_gross);
         gross.setVisibility(View.VISIBLE);
         gross.setText(on ? "已开启" : "未开启");
         gross.setTextColor(helper.itemView.getContext().getResources().getColor(on ? R.color.green : R.color.text));

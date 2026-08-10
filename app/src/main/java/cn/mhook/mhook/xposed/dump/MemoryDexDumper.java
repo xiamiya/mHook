@@ -50,7 +50,80 @@ public class MemoryDexDumper {
         hookInMemoryDexClassLoader(lpparam);
         hookDexClassLoader(lpparam);
         hookDexFile(lpparam);
-        hookLoadClass(lpparam);
+        // 不 hook loadClass：会频繁触发原生内存读取，易被加固（如阿里 Ashield）检测崩溃。
+        // 改为延迟后台一次性枚举已加载 dex，用 cookie 的 begin/size 精确定位读取（BlackDex 思路）。
+        sAppClassLoader = lpparam.classLoader;
+        scheduleDumpAll();
+    }
+
+    private static ClassLoader sAppClassLoader;
+
+    /** 延迟后台枚举所有 ClassLoader 已加载的 dex（每 dex 只读一次）。 */
+    private static void scheduleDumpAll() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(3000);
+                } catch (Throwable ignored) {
+                }
+                try {
+                    dumpAllLoadedDexes();
+                } catch (Throwable ignored) {
+                }
+            }
+        }).start();
+    }
+
+    /** 遍历 ClassLoader 链，读各 dexElements 的 DexFile.mCookie，用 begin/size 读取。 */
+    private static void dumpAllLoadedDexes() {
+        ClassLoader start = sAppClassLoader;
+        if (start == null) start = Thread.currentThread().getContextClassLoader();
+        ClassLoader cl = start;
+        int guard = 0;
+        int totalCookie = 0;
+        while (cl != null && guard++ < 16) {
+            try {
+                Object pathList = XposedHelpers.getObjectField(cl, "pathList");
+                if (pathList != null) {
+                    Object[] elements = (Object[]) XposedHelpers.getObjectField(pathList, "dexElements");
+                    if (elements != null) {
+                        for (Object el : elements) {
+                            try {
+                                Object dexFile = XposedHelpers.getObjectField(el, "dexFile");
+                                if (dexFile == null) continue;
+                                Object cookieObj = XposedHelpers.getObjectField(dexFile, "mCookie");
+                                if (cookieObj instanceof long[]) {
+                                    long[] cookies = (long[]) cookieObj;
+                                    for (long c : cookies) {
+                                        if (dumpCookie(c)) totalCookie++;
+                                    }
+                                } else if (cookieObj instanceof Number) {
+                                    if (dumpCookie(((Number) cookieObj).longValue())) totalCookie++;
+                                }
+                            } catch (Throwable ignored) {
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+            cl = cl.getParent();
+        }
+        XposedBridge.log("MemoryDexDumper enumerate done, newDex=" + totalCookie);
+    }
+
+    private static boolean dumpCookie(long c) {
+        if (c == 0) return false;
+        synchronized (sSeenCookies) {
+            if (!sSeenCookies.add(c)) return false;
+        }
+        byte[] data = UnsafeAccess.readArtDex(c);
+        if (data != null) {
+            dumpDex(data);
+            return true;
+        }
+        return false;
     }
 
     /** 第一层：内存 dex */
@@ -138,6 +211,16 @@ public class MemoryDexDumper {
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                             Class clazz = (Class) param.getResult();
                             if (clazz == null || clazz.getClassLoader() == null) return;
+                            // 跳过框架/系统/第三方库类，避免启动期对每个类做反射+整份dex内存读取导致卡死
+                            String n = clazz.getName();
+                            if (n.startsWith("java.") || n.startsWith("javax.") || n.startsWith("android.")
+                                    || n.startsWith("com.android.") || n.startsWith("dalvik.")
+                                    || n.startsWith("sun.") || n.startsWith("org.apache.")
+                                    || n.startsWith("androidx.") || n.startsWith("kotlin.")
+                                    || n.startsWith("org.jetbrains.") || n.startsWith("com.google.")
+                                    || n.startsWith("okhttp3.") || n.startsWith("okio.")) {
+                                return;
+                            }
                             dumpClassDex(clazz);
                         }
                     });
@@ -331,6 +414,11 @@ public class MemoryDexDumper {
         }
         File file = new File(dumpDir, "source-" + data.length + "-" + Long.toHexString(crc.getValue()) + ".dex");
         FileUtils.writeByteToFile(data, file.getAbsolutePath());
+        try {
+            file.setReadable(true, false);
+            file.setWritable(true, false);
+        } catch (Throwable ignored) {
+        }
         XposedBridge.log("MemoryDexDumper dump: " + file.getName() + " size=" + data.length);
     }
 
@@ -479,24 +567,19 @@ public class MemoryDexDumper {
 
         static byte[] readArtDex(long cookie) {
             try {
-                long ptr = cookie;
-                long begin = readPtr(ptr);
-                long size = readPtr(ptr + 8);
-                if (readInt(begin) != 0x0A786564) {
-                    long ptr2 = readPtr(ptr);
-                    if (ptr2 != 0) {
-                        begin = readPtr(ptr2);
-                        size = readPtr(ptr2 + 8);
-                    }
+                // cookie 指向 ArtDexFile 对象；begin_/size_ 偏移随 ART 版本变化，
+                // 扫对象前 0x80 字节内的指针，命中 dex magic 即按 file_size 读取。
+                for (int off = 0; off < 0x80; off += 8) {
+                    long p = readPtr(cookie + off);
+                    if (p == 0 || (p & 3) != 0) continue;
+                    if (readInt(p) != 0x0A786564) continue;
+                    long fileSize = readInt(p + 0x20) & 0xFFFFFFFFL;
+                    if (fileSize < 0x70 || fileSize > 256L * 1024 * 1024) continue;
+                    return readMem(p, (int) fileSize);
                 }
-                if (readInt(begin) != 0x0A786564) return null;
-                long fileSize = readInt(begin + 0x20) & 0xFFFFFFFFL;
-                if (fileSize < 0x70 || fileSize > size) fileSize = size;
-                if (fileSize < 0x70 || fileSize > 256L * 1024 * 1024) return null;
-                return readMem(begin, (int) fileSize);
             } catch (Throwable t) {
-                return null;
             }
+            return null;
         }
     }
 }

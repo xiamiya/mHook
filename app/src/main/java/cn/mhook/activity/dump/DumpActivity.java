@@ -36,6 +36,7 @@ import cn.mhook.activity.selectapp.SelectAppItem;
 import cn.mhook.mhook.R;
 
 import static cn.mhook.mData.mDir;
+import static cn.mhook.msu.su.exec;
 import static cn.mhook.msu.su.set777;
 
 public class DumpActivity extends BaseActivity {
@@ -82,7 +83,7 @@ public class DumpActivity extends BaseActivity {
                 new QMUIDialog.MessageDialogBuilder(DumpActivity.this)
                         .setTitle(on ? "关闭脱壳" : "开启脱壳")
                         .setMessage(on ? "关闭后将删除该应用的 dump 开关目录（已脱壳的 dex 也会被移除）"
-                                : "开启后重启目标应用即自动脱壳，dex 将保存到 /data/mHook/" + pkg + "/dump/")
+                                : "开启后重启目标应用即自动脱壳。\n\ndex 文件保存位置：\n/data/mHook/" + pkg + "/dump/")
                         .setSkinManager(QMUISkinManager.defaultInstance(DumpActivity.this))
                         .addAction("取消", new QMUIDialogAction.ActionListener() {
                             @Override
@@ -94,7 +95,7 @@ public class DumpActivity extends BaseActivity {
                             @Override
                             public void onClick(QMUIDialog dialog, int index) {
                                 setDump(pkg, !on);
-                                RxToast.success(on ? "已关闭脱壳" : "已开启脱壳，重启目标应用后生效");
+                                RxToast.success(on ? "已关闭脱壳" : "已开启脱壳，dex 保存到 /data/mHook/" + pkg + "/dump/，重启目标应用后生效");
                                 initList("");
                                 dialog.dismiss();
                             }
@@ -173,6 +174,8 @@ public class DumpActivity extends BaseActivity {
     private static void setDump(String pkg, boolean on){
         String dir = mDir + pkg + "/dump";
         if (on){
+            // 用 su 同步创建并设 777，确保目标应用进程能写入脱壳 dex
+            exec("mkdir -p '" + dir + "' && chmod 777 '" + dir + "'");
             new File(dir).mkdirs();
         }else {
             RxFileTool.deleteDir(dir);

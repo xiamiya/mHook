@@ -90,6 +90,9 @@ public class SettingActivity extends BaseActivity {
                                         + "RxShell（darken）\n"
                                         + "FreeReflection（tiann）\n"
                                         + "AndroidX 系列组件（Google）\n"
+                                        + "dexlib2（JesusFreke）\n"
+                                        + "Guava（Google）\n"
+                                        + "BlackDex（CodingGay）\n"
                                         + "玄星逆核（XuanXing/NieHe）逆向技能文档（AGPL-3.0）\n\n"
                                         + "以上项目的详细许可见各自开源仓库。")
                                 .setSkinManager(QMUISkinManager.defaultInstance(SettingActivity.this))
