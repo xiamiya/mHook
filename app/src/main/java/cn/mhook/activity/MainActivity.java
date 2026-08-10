@@ -90,6 +90,18 @@ public class MainActivity extends BaseActivity {
         handler.post(task);
         initViewPager();
         startAppInfo();
+        // 启动时自动检查更新（有新版才弹窗，已忽略的版本不提示）
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (!MainActivity.this.isFinishing() && !MainActivity.this.isDestroyed()) {
+                        cn.mhook.update.UpdateManager.checkAndShow(MainActivity.this, false);
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+        }, 2500);
       //initTab();
     }
 

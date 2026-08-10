@@ -1,12 +1,12 @@
 package cn.mhook.activity;
 
+import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.didikee.donate.AlipayDonate;
-import android.didikee.donate.WeiXinDonate;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 
@@ -25,6 +25,7 @@ import cn.mhook.App;
 import cn.mhook.BaseActivity;
 import cn.mhook.activity.intro.IntroActivity;
 import cn.mhook.mhook.R;
+import cn.mhook.update.UpdateManager;
 import eu.darken.rxshell.cmd.Cmd;
 import cn.mhook.msu.su;
 
@@ -101,48 +102,31 @@ public class SettingActivity extends BaseActivity {
                                 .create().show();
                     }
                 })
-                .addItemView(getListItem("打赏支持", "请若雪吃鸡腿哦"), new View.OnClickListener() {
+                .addItemView(getListItem("打赏支持", "请夏糜吃鸡腿"), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        final String[] items = new String[]{"支付宝", "微信"};
-                        new QMUIDialog.MenuDialogBuilder(SettingActivity.this)
-                                .setSkinManager(QMUISkinManager.defaultInstance(SettingActivity.this))
-                                .addItems(items, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        switch (which){
-                                            case 0:
-                                                donateAlipay("fkx19481bhemqj0n3fkdr69");
-                                                break;
-                                            case 1:
-                                                donateWeixin();
-                                                break;
-                                        }
-                                        dialog.dismiss();
-                                    }
-                                })
-                                .create().show();
+                        startActivity(new Intent(SettingActivity.this, DonateActivity.class));
+                    }
+                })
+                .addItemView(getListItem("检查更新", "当前版本 v" + currentVersion()), new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        checkUpdate();
                     }
                 })
                 .addTo(mGroupListView);
 
     }
 
-    private void donateAlipay(String payCode) {
-        boolean hasInstalledAlipayClient = AlipayDonate.hasInstalledAlipayClient(this);
-        if (hasInstalledAlipayClient) {
-            AlipayDonate.startAlipayClient(this, payCode);
-        }
+    private void checkUpdate() {
+        UpdateManager.checkAndShow(this, true);
     }
 
-    private void donateWeixin() {
-        InputStream weixinQrIs = getResources().openRawResource(R.raw.happy);
-        String qrPath = "/sdcard/data/Android/data/cn.mhook.mhook/files" + File.separator + "AndroidDonateSample" + File.separator +
-                "didikee_weixin.png";
-        RxToast.success("二维码保存在相册哦");
-        WeiXinDonate.saveDonateQrImage2SDCard(qrPath, BitmapFactory.decodeStream(weixinQrIs));
-        WeiXinDonate.donateViaWeiXin(this, qrPath);
+    private String currentVersion() {
+        return UpdateManager.currentVersion(this);
     }
+
+    private Handler handler = new Handler(Looper.getMainLooper());
 
     private QMUICommonListItemView getListItem(String title,String detail){
         QMUICommonListItemView statusCheck = mGroupListView.createItemView(title);

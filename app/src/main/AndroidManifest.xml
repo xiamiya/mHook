@@ -40,6 +40,7 @@
         <activity android:name="cn.mhook.activity.appxw.AppSetCfg" />
         <activity android:name="cn.mhook.activity.appxw.AppXWActivity" />
         <activity android:name="cn.mhook.activity.SettingActivity" />
+<activity android:name="cn.mhook.activity.DonateActivity" />
         <activity
             android:name="cn.mhook.activity.MainActivity"
             android:configChanges="uiMode"

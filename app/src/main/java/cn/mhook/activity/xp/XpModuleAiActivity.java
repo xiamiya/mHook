@@ -51,6 +51,8 @@ public class XpModuleAiActivity extends BaseActivity {
     private ScrollView scrollView;
     private File apkFile;
     private boolean running = false;
+    private boolean extracting = false;
+    private String extractedDump;
     private List<JSONObject> parsedList;
     private SimpleDateFormat timeFmt = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
 
@@ -140,8 +142,8 @@ public class XpModuleAiActivity extends BaseActivity {
                         @Override
                         public void run() {
                             appendLog("✓ APK 已就绪：" + apkFile.getName());
-                            setStatus("已选择：" + apkFile.getName() + "，点击「开始AI分析」。");
-                            RxToast.success("APK 已就绪");
+                            setStatus("已选择：" + apkFile.getName() + "，正在提取 hook 点…");
+                            extractAndShow();
                         }
                     });
                 } catch (final Throwable t) {
@@ -187,8 +189,8 @@ public class XpModuleAiActivity extends BaseActivity {
     }
 
     private void startAiAnalyze() {
-        if (running) {
-            RxToast.info("正在分析中…");
+        if (running || extracting) {
+            RxToast.info("正在处理中…");
             return;
         }
         if (apkFile == null || !apkFile.exists()) {
@@ -200,18 +202,61 @@ public class XpModuleAiActivity extends BaseActivity {
             openAiSettings();
             return;
         }
-        running = true;
-        parsedList = null;
-        findViewById(R.id.xpai_import_btn).setEnabled(false);
-        outputView.setText("分析过程将在这里实时显示");
-        appendLog("[步骤 1/3] 用 dexlib2 提取 hook 点…");
-        setStatus("正在用 dexlib2 提取 hook 点…");
-        RxToast.info("提取并分析中…");
+        if (extractedDump != null) {
+            runAi(extractedDump);
+        } else {
+            extractAndRunAi();
+        }
+    }
 
+    private void extractAndShow() {
+        if (extracting) return;
+        extracting = true;
+        outputView.setText("分析过程将在这里实时显示");
+        appendLog("[提取] 用 dexlib2 提取 hook 点…");
         new Thread(new Runnable() {
             @Override
             public void run() {
                 final long t0 = System.currentTimeMillis();
+                final String dump;
+                try {
+                    dump = XpExtract.extract(apkFile);
+                } catch (final Throwable t) {
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            extracting = false;
+                            appendLog("✗ 提取失败：" + t.getMessage());
+                            setStatus("提取失败: " + t.getMessage());
+                            RxToast.error("提取失败: " + t.getMessage());
+                        }
+                    });
+                    return;
+                }
+                final long dt = System.currentTimeMillis() - t0;
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        extracting = false;
+                        extractedDump = dump;
+                        showExtractResult(dump, dt);
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void extractAndRunAi() {
+        if (extracting || running) return;
+        running = true;
+        parsedList = null;
+        findViewById(R.id.xpai_import_btn).setEnabled(false);
+        outputView.setText("分析过程将在这里实时显示");
+        appendLog("[提取] 用 dexlib2 提取 hook 点…");
+        setStatus("正在提取 hook 点…");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
                 final String dump;
                 try {
                     dump = XpExtract.extract(apkFile);
@@ -227,24 +272,10 @@ public class XpModuleAiActivity extends BaseActivity {
                     });
                     return;
                 }
-                final long dt = System.currentTimeMillis() - t0;
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        String[] lines = dump.split("\n");
-                        int hooks = 0, cbs = 0;
-                        for (String l : lines) {
-                            if (l.startsWith("HOOK ")) hooks++;
-                            if (l.startsWith("### CALLBACK ")) cbs++;
-                        }
-                        appendLog("✓ 提取完成：共 " + lines.length + " 行，检测到 " + hooks + " 个 hook 点 / " + cbs
-                                + " 个回调（用时 " + (dt / 1000.0) + "s）");
-                        if (XpExtract.heavyObfuscation) {
-                            appendLog("⚠ 检测到高强度混淆：hook 目标字符串加密/被混淆，静态分析可能无法还原。\n"
-                                    + "   AI 若无法给出配置属正常情况，建议改用运行时动态抓取。");
-                            setStatus("提取完成，但检测到高强度混淆，AI 可能无法给出配置");
-                            RxToast.warning("检测到高强度混淆，hook 目标可能无法静态还原");
-                        }
+                        extractedDump = dump;
                         runAi(dump);
                     }
                 });
@@ -252,8 +283,43 @@ public class XpModuleAiActivity extends BaseActivity {
         }).start();
     }
 
+    private void showExtractResult(String dump, long dt) {
+        String[] lines = dump.split("\n");
+        int hooks = 0, cbs = 0;
+        java.util.List<String> hookLines = new ArrayList<String>();
+        for (String l : lines) {
+            if (l.startsWith("HOOK ")) { hooks++; hookLines.add(l); }
+            if (l.startsWith("### CALLBACK ")) cbs++;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("✓ 提取完成：检测到 ").append(hooks).append(" 个 hook 点 / ").append(cbs)
+          .append(" 个回调（用时 ").append(dt / 1000.0).append("s）\n");
+        if (XpExtract.heavyObfuscation) {
+            sb.append("⚠ 检测到高强度混淆：hook 目标字符串加密/被混淆，静态分析可能无法还原。\n");
+            for (String l : lines) {
+                if (l.startsWith("=>")) { sb.append(l).append('\n'); break; }
+            }
+        } else {
+            sb.append("✓ 未检测到明显混淆。\n");
+        }
+        sb.append("—— 提取结果预览 ——\n");
+        for (int i = 0; i < Math.min(hookLines.size(), 15); i++) {
+            sb.append(hookLines.get(i)).append('\n');
+        }
+        if (hookLines.size() > 15) sb.append("  … 共 ").append(hooks).append(" 条\n");
+        outputView.setText(sb.toString());
+        scrollBottom();
+        if (XpExtract.heavyObfuscation) {
+            setStatus("提取完成（含高强度混淆提示），可「开始AI分析」尝试，或直接放弃");
+            RxToast.warning("检测到高强度混淆，hook 目标可能无法静态还原");
+        } else {
+            setStatus("提取完成，可点击「开始AI分析」生成配置");
+            RxToast.success("提取完成：" + hooks + " 个 hook 点");
+        }
+    }
+
     private void runAi(final String dump) {
-        appendLog("[步骤 2/3] 调用 AI 分析（模型 " + AiSetting.model(this) + "）…");
+        appendLog("[步骤 1/2] 调用 AI 分析（模型 " + AiSetting.model(this) + "）…");
         setStatus("AI 分析中…");
         String system = AiPrompt.buildModule(this, apkFile.getName());
         String user = "XP 模块 APK 提取结果（文件 " + apkFile.getName() + "）：\n\n" + dump;
@@ -279,7 +345,7 @@ public class XpModuleAiActivity extends BaseActivity {
                     RxToast.warning("AI 未返回内容");
                     return;
                 }
-                appendLog("\n[步骤 3/3] 解析 AI 结果…");
+                appendLog("\n[步骤 2/2] 解析 AI 结果…");
                 try {
                     parsedList = ResultParser.parseHookApps(fullText);
                     int apps = parsedList.size();

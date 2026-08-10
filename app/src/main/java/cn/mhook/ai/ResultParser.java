@@ -163,9 +163,29 @@ public class ResultParser {
             throw new Exception("AI 结果为空");
         }
         List<JSONObject> out = new java.util.ArrayList<JSONObject>();
+        int skipped = 0;
         for (Object o : arr){
             String s = (o instanceof JSONObject) ? ((JSONObject) o).toJSONString() : String.valueOf(o);
+            JSONObject item;
+            try {
+                item = JSONObject.parseObject(s);
+            } catch (Throwable t) {
+                skipped++;
+                continue;
+            }
+            if (item == null){
+                skipped++;
+                continue;
+            }
+            JSONArray h = item.getJSONArray("hooks");
+            if (h == null || h.isEmpty()){
+                skipped++;
+                continue;
+            }
             out.add(parseAndNormalize(s));
+        }
+        if (out.isEmpty()){
+            throw new Exception("AI 结果中没有可导入的 hook 配置" + (skipped > 0 ? "（跳过 " + skipped + " 个空配置）" : ""));
         }
         return out;
     }

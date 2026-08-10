@@ -11,6 +11,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.qmuiteam.qmui.skin.QMUISkinManager;
 import com.qmuiteam.qmui.widget.dialog.QMUIDialog;
@@ -559,24 +560,80 @@ public class AiActivity extends BaseActivity {
         maxTokens.setText(String.valueOf(AiSetting.maxTokens(this)));
         container.addView(maxTokens);
 
+        final MaterialEditText maxSteps = new MaterialEditText(this);
+        maxSteps.setHint("最大工具调用轮数");
+        maxSteps.setHelperText("AI 可连续调用工具的轮次上限（默认 32）");
+        maxSteps.setInputType(InputType.TYPE_CLASS_NUMBER);
+        maxSteps.setText(String.valueOf(AiSetting.maxSteps(this)));
+        container.addView(maxSteps);
+
         new AlertDialog.Builder(this)
                 .setTitle("AI 设置")
                 .setView(container)
-                .setPositiveButton("保存", new DialogInterface.OnClickListener() {
+                .setNeutralButton("连接测试", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        AiSetting.setBaseUrl(AiActivity.this, baseUrl.getText().toString());
-                        AiSetting.setApiKey(AiActivity.this, apiKey.getText().toString());
-                        AiSetting.setModel(AiActivity.this, model.getText().toString());
-                        try {
-                            AiSetting.setMaxTokens(AiActivity.this, Integer.parseInt(maxTokens.getText().toString().trim()));
-                        }catch (Throwable ignored){
-                        }
-                        RxToast.success("已保存");
+                        saveSettings(baseUrl, apiKey, model, maxTokens, maxSteps);
+                        testConnection();
                     }
                 })
                 .setNegativeButton("取消", null)
+                .setPositiveButton("保存", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        saveSettings(baseUrl, apiKey, model, maxTokens, maxSteps);
+                        RxToast.success("已保存");
+                    }
+                })
                 .show();
+    }
+
+    private void saveSettings(MaterialEditText baseUrl, MaterialEditText apiKey, MaterialEditText model,
+                              MaterialEditText maxTokens, MaterialEditText maxSteps){
+        AiSetting.setBaseUrl(AiActivity.this, baseUrl.getText().toString());
+        AiSetting.setApiKey(AiActivity.this, apiKey.getText().toString());
+        AiSetting.setModel(AiActivity.this, model.getText().toString());
+        try {
+            AiSetting.setMaxTokens(AiActivity.this, Integer.parseInt(maxTokens.getText().toString().trim()));
+        }catch (Throwable ignored){
+        }
+        try {
+            AiSetting.setMaxSteps(AiActivity.this, Integer.parseInt(maxSteps.getText().toString().trim()));
+        }catch (Throwable ignored){
+        }
+    }
+
+    private void testConnection(){
+        if (AiSetting.baseUrl(this).isEmpty() || AiSetting.apiKey(this).isEmpty() || AiSetting.model(this).isEmpty()){
+            RxToast.warning("请先填写接口地址 / API Key / 模型");
+            return;
+        }
+        RxToast.info("正在测试连接…");
+        AiClient.stream(AiActivity.this,
+                "你是连通性测试助手，只回复 OK 即可，不要输出其他内容。",
+                "测试连接，请回复 OK。",
+                new AiClient.Listener() {
+                    @Override
+                    public void onDelta(String text) {
+                    }
+
+                    @Override
+                    public void onToolCalls(JSONArray toolCalls) {
+                    }
+
+                    @Override
+                    public void onDone(String fullText) {
+                        String r = fullText == null ? "" : fullText.trim();
+                        android.util.Log.i("XpAiTest", "conn ok: " + r);
+                        RxToast.success("连接成功：" + (r.isEmpty() ? "已响应" : r));
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        android.util.Log.w("XpAiTest", "conn fail: " + t.getMessage(), t);
+                        RxToast.error("连接失败：" + t.getMessage());
+                    }
+                });
     }
 
     private void showMcpSettings(){

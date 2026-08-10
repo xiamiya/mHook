@@ -64,7 +64,7 @@
         android:paddingLeft="16dp"
         android:paddingRight="16dp"
         android:paddingBottom="8dp"
-        android:text="选择 XP 模块 APK，dexlib2 提取后交给 AI，实时显示分析过程。"
+        android:text="选择 XP 模块 APK，选中后自动用 dexlib2 提取并显示 hook 点与混淆评估，再由你决定是否用 AI 生成配置。"
         android:textColor="@color/app_color_description"
         android:textSize="13sp" />
 

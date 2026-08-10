@@ -27,6 +27,7 @@ public class AiSession {
     }
 
     public static final int MAX_STEPS = 32;
+    private static volatile int maxSteps = MAX_STEPS;
     private static volatile boolean stopFlag = false;
     private static final List<String> availableTools = new ArrayList<String>();
 
@@ -36,6 +37,8 @@ public class AiSession {
 
     public static void run(final Context ctx, final String system, final String user, final Listener listener) {
         stopFlag = false;
+        maxSteps = AiSetting.maxSteps(ctx);
+        if (maxSteps <= 0) maxSteps = MAX_STEPS;
         availableTools.clear();
         final Handler main = new Handler(Looper.getMainLooper());
         new Thread(new Runnable() {
@@ -83,8 +86,8 @@ public class AiSession {
             });
             return;
         }
-        if (step >= MAX_STEPS) {
-            final String tip = "\n[已停止：达到最大工具调用轮次 " + MAX_STEPS + "]";
+        if (step >= maxSteps) {
+            final String tip = "\n[已停止：达到最大工具调用轮次 " + maxSteps + "]";
             main.post(new Runnable() {
                 @Override
                 public void run() {

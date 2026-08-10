@@ -23,7 +23,7 @@
                 android:layout_centerVertical="true"
                 android:layout_marginLeft="20dp"
                 android:layout_marginTop="10dp"
-                android:text="AI 分析"
+                android:text="应用分析"
                 android:textSize="16dp"
                 android:textStyle="bold" />
         </RelativeLayout>
