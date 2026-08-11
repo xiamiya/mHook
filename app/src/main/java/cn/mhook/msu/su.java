@@ -72,4 +72,29 @@ public class su {
             Log.e("su", "exec err: " + t.getMessage());
         }
     }
+
+    /** 同步执行 su 命令并返回标准输出（去首尾空白）。 */
+    public static String getOutput(String cmd){
+        StringBuilder sb = new StringBuilder();
+        try {
+            Process p = Runtime.getRuntime().exec(new String[]{"su", "-c", cmd});
+            java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()));
+            String line;
+            while ((line = r.readLine()) != null) sb.append(line).append('\n');
+            p.waitFor();
+        } catch (Throwable t) {
+            Log.e("su", "getOutput err: " + t.getMessage());
+        }
+        return sb.toString().trim();
+    }
+
+    /** 判断目标包名是否有运行中的进程（su 查 pidof）。 */
+    public static boolean hasProcess(String pkg){
+        try {
+            String out = getOutput("pidof '" + pkg + "'");
+            return out != null && !out.isEmpty();
+        } catch (Throwable t) {
+            return false;
+        }
+    }
 }

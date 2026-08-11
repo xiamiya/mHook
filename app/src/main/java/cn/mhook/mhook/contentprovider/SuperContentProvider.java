@@ -33,6 +33,11 @@ public class SuperContentProvider extends ContentProvider {
         DBHelper helper = new DBHelper(getContext());
         // 创建数据库
         db = helper.getWritableDatabase();
+        try {
+            // 多进程/多应用并发写时减少 SQLITE_BUSY 失败
+            db.execSQL("PRAGMA busy_timeout = 5000;");
+        } catch (Throwable ignored) {
+        }
         return true;
     }
 

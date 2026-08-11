@@ -57,6 +57,7 @@ public class XposedMain implements IXposedHookLoadPackage, IXposedHookZygoteInit
                     Context c = (Context) param.args[0];
                     if (c!=null){
                         H.context = c;
+                        H.flush();
                         new StartHook().init();
                     }
                 }

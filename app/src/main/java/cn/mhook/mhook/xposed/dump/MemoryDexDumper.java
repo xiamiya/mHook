@@ -16,6 +16,7 @@ import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 import static cn.mhook.mhook.xposed.utils.mHookCfg.dumpDir;
+import static cn.mhook.mhook.xposed.utils.mHookCfg.mDir;
 
 /**
  * 纯 Java 内存脱壳
@@ -58,18 +59,40 @@ public class MemoryDexDumper {
 
     private static ClassLoader sAppClassLoader;
 
-    /** 延迟后台枚举所有 ClassLoader 已加载的 dex（每 dex 只读一次）。 */
+    /**
+     * 多批次 + 手动触发：后台线程持续运行，
+     * 在 3/8/15/25/40/60 秒各枚举一次（抓延迟解密的壳），
+     * 并轮询 dump_now 标志文件实现 UI 的「立即脱壳」。
+     */
     private static void scheduleDumpAll() {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    Thread.sleep(3000);
-                } catch (Throwable ignored) {
-                }
-                try {
-                    dumpAllLoadedDexes();
-                } catch (Throwable ignored) {
+                long[] at = {3000, 8000, 15000, 25000, 40000, 60000};
+                long start = System.currentTimeMillis();
+                int round = 0;
+                while (true) {
+                    try {
+                        File flag = new File(mDir + "dump_now");
+                        if (flag.exists()) {
+                            try { flag.delete(); } catch (Throwable ignored) {
+                            }
+                            try { dumpAllLoadedDexes(); } catch (Throwable ignored) {
+                            }
+                            continue;
+                        }
+                        long el = System.currentTimeMillis() - start;
+                        if (round < at.length && el >= at[round]) {
+                            round++;
+                            try { dumpAllLoadedDexes(); } catch (Throwable ignored) {
+                            }
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                    try {
+                        Thread.sleep(1000);
+                    } catch (Throwable ignored) {
+                    }
                 }
             }
         }).start();

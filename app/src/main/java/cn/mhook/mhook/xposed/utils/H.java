@@ -57,6 +57,20 @@ public  class H {
         }
     }
 
+    /** 上下文就绪后冲刷之前缓存的记录，避免早期事件因后续无事件而丢失。 */
+    public static void flush(){
+        try {
+            if (waitSend == null || waitSend.size() == 0) return;
+            Context c = context != null ? context : aContext;
+            if (c == null) return;
+            for (Object o : waitSend) {
+                PrintData.putData(c, o.toString());
+            }
+            waitSend.clear();
+        } catch (Throwable ignored) {
+        }
+    }
+
     public static String msg(String type,Object msg,Object other){
         JSONObject ret = new JSONObject(true);
         ret.put("type",type);

@@ -74,11 +74,16 @@ public class DumpActivity extends BaseActivity {
         adapter = new DumpAdapter(datas);
         adapter.setEmptyView(LayoutInflater.from(this).inflate(R.layout.view_empty, null));
         adapter.addChildClickViewIds(R.id.appInfoItem);
+        adapter.addChildClickViewIds(R.id.item_dump_btn);
         adapter.addChildLongClickViewIds(R.id.appInfoItem);
         adapter.setOnItemChildClickListener(new OnItemChildClickListener() {
             @Override
             public void onItemChildClick(@NonNull BaseQuickAdapter adapter, @NonNull View view, int position) {
                 final String pkg = datas.get(position).getPkg();
+                if (view.getId() == R.id.item_dump_btn) {
+                    dumpNow(pkg);
+                    return;
+                }
                 final boolean on = isDumpOn(pkg);
                 new QMUIDialog.MessageDialogBuilder(DumpActivity.this)
                         .setTitle(on ? "关闭脱壳" : "开启脱壳")
@@ -169,6 +174,35 @@ public class DumpActivity extends BaseActivity {
 
     private static boolean isDumpOn(String pkg){
         return new File(mDir + pkg + "/dump").exists();
+    }
+
+    /** 立即脱壳：向目标进程写 dump_now 触发文件，其脱壳线程会执行一次枚举。 */
+    private void dumpNow(String pkg){
+        if (!isAppRunning(pkg)) {
+            RxToast.warning("目标应用未运行，请先启动 " + pkg);
+            return;
+        }
+        if (!isDumpOn(pkg)) {
+            RxToast.warning("请先开启该应用的脱壳");
+            return;
+        }
+        exec("mkdir -p '" + mDir + pkg + "' && chmod 777 '" + mDir + pkg
+                + "' && echo 1 > '" + mDir + pkg + "/dump_now'");
+        RxToast.success("已触发立即脱壳，稍候自动刷新");
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                initList("");
+            }
+        }, 3000);
+    }
+
+    private boolean isAppRunning(String pkg) {
+        try {
+            return cn.mhook.msu.su.hasProcess(pkg);
+        } catch (Throwable ignored) {
+        }
+        return false;
     }
 
     private static void setDump(String pkg, boolean on){

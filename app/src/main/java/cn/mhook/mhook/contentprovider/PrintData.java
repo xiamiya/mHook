@@ -11,14 +11,19 @@ public class PrintData {
 
 
     public static void putData(Context context, String str){
-        try {
-            Uri bookUri = Uri.parse("content://mHookData/print");
-            ContentValues values = new ContentValues();
-            values.put("msg",str);
-            values.put("time", "");
-            context.getContentResolver().insert(bookUri,values);
-        }catch (Throwable throwable){}
-
+        Uri bookUri = Uri.parse("content://mHookData/print");
+        for (int i = 0; i < 3; i++) {
+            try {
+                ContentValues values = new ContentValues();
+                values.put("msg", str);
+                values.put("time", "");
+                context.getContentResolver().insert(bookUri, values);
+                return;
+            } catch (Throwable t) {
+                try { Thread.sleep(200); } catch (Throwable ignored) {
+                }
+            }
+        }
     }
 
     public static JSONObject getData(Context context,int startId){
