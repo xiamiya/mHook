@@ -19,13 +19,18 @@ import cn.mhook.mhook.xposed.utils.H;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
+import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
+import static cn.mhook.mhook.xposed.Config.getAppCfg;
 import static cn.mhook.mhook.xposed.Config.getEnable;
 import static cn.mhook.mhook.xposed.utils.H.getStackTrace;
 import static cn.mhook.mhook.xposed.utils.H.putDetail;
 
 public class AppXWFX {
-    public AppXWFX(){
+    private final XC_LoadPackage.LoadPackageParam lpparam;
+
+    public AppXWFX(XC_LoadPackage.LoadPackageParam lpparam){
+        this.lpparam = lpparam;
         if (!getEnable("appCfgEnable")){
             return;
         }
@@ -35,6 +40,18 @@ public class AppXWFX {
         if (getEnable("activity_goto")) hookActivityOnCreate();
         if (getEnable("activity_finish")) hookActivitySkip();
         if (getEnable("file")) hookFiles();
+        initMethodReturnProbe();
+    }
+
+    /** 自定义方法返回值探测：读取 appCfg 的 methodReturn 数组并 hook。 */
+    private void initMethodReturnProbe(){
+        try {
+            com.alibaba.fastjson.JSONObject cfg = getAppCfg();
+            if (cfg != null && cfg.getJSONArray("methodReturn") != null) {
+                MethodReturnProbe.init(lpparam, cfg.getJSONArray("methodReturn"));
+            }
+        } catch (Throwable ignored) {
+        }
     }
 
     private void hookDialog(){

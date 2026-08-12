@@ -98,7 +98,7 @@ public class XposedMain implements IXposedHookLoadPackage, IXposedHookZygoteInit
         }
 
         try {
-            new AppXWFX();
+            new AppXWFX(loadPackageParam);
         }catch (Throwable e){
             Log.w("err","应用行为分析失败："+e.getMessage());
         }
