@@ -227,12 +227,15 @@ public class DumpActivity extends BaseActivity {
                 if (datas.size()>0){
                     datas.clear();
                 }
-                for (File file: RxFileTool.listFilesInDir(mDir,false)){
-                    String filePath = file.getPath();
-                    if (RxFileTool.fileExists(filePath+"/dump")){
-                        String pkg = file.getName();
-                        if (pkg.contains(query)|| RxAppTool.getAppName(DumpActivity.this,pkg).contains(query)){
-                            datas.add(new SelectAppItem(pkg,RxAppTool.getAppVersionName(DumpActivity.this,pkg),RxAppTool.getAppName(DumpActivity.this,pkg),false));
+                java.util.List<File> fileList = RxFileTool.listFilesInDir(mDir,false);
+                if (fileList != null) {
+                    for (File file : fileList) {
+                        String filePath = file.getPath();
+                        if (RxFileTool.fileExists(filePath+"/dump")){
+                            String pkg = file.getName();
+                            if (pkg.contains(query)|| RxAppTool.getAppName(DumpActivity.this,pkg).contains(query)){
+                                datas.add(new SelectAppItem(pkg,RxAppTool.getAppVersionName(DumpActivity.this,pkg),RxAppTool.getAppName(DumpActivity.this,pkg),false));
+                            }
                         }
                     }
                 }

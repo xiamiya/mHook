@@ -93,6 +93,10 @@ public class SettingActivity extends BaseActivity {
                                         + "dexlib2（JesusFreke）\n"
                                         + "Guava（Google）\n"
                                         + "BlackDex（CodingGay）\n"
+                                        + "BlackBox 虚拟沙箱引擎（top.niunaijun / BlackBoxReborn）\n"
+                                        + "VirtualApp（Lody）虚拟容器奠基\n"
+                                        + "Dobby inline Hook（jmpews）\n"
+                                        + "FreeReflection 隐藏API绕过（tiann）\n"
                                         + "玄星逆核（XuanXing/NieHe）逆向技能文档（AGPL-3.0）\n\n"
                                         + "以上项目的详细许可见各自开源仓库。")
                                 .setSkinManager(QMUISkinManager.defaultInstance(SettingActivity.this))

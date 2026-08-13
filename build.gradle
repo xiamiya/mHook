@@ -8,12 +8,22 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.2'
+        classpath 'com.android.tools.build:gradle:8.13.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
+}
+
+ext {
+    compileSdkVersion = 36
+    targetSdkVersion = 28
+    minSdk = 24
+    versionCode = 400
+    versionName = "4.0.0"
+    xVersion = '1.1.0'
+    hiddenApiBypass = '4.3'
 }
 
 allprojects {

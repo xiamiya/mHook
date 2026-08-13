@@ -15,6 +15,7 @@ import java.util.List;
 import cn.mhook.activity.SettingActivity;
 import cn.mhook.activity.ai.AiActivity;
 import cn.mhook.activity.appxw.AppXWActivity;
+import cn.mhook.activity.SandboxDumpActivity;
 import cn.mhook.activity.dump.DumpActivity;
 import cn.mhook.activity.hook.HookActivity;
 import cn.mhook.activity.mkfix.MKFixActivity;
@@ -74,6 +75,12 @@ public class MainFragment extends QMUIFragment {
             @Override
             public void onClick(View v) {
                 RxActivityTool.skipActivity(getContext(), DumpActivity.class);
+            }
+        }));
+        datas.add(new MainItem("沙箱脱壳（免root）", "选APK自动装入沙箱运行并dump，全程免root", getResources().getColor(R.color.app_color_theme_2), R.drawable.app_xw, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                RxActivityTool.skipActivity(getContext(), SandboxDumpActivity.class);
             }
         }));
         datas.add(new MainItem("应用分析", "AI生成Hook配置/自动改包", getResources().getColor(R.color.app_color_theme_1), R.drawable.comment, new View.OnClickListener() {

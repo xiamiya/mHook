@@ -30,10 +30,8 @@ public class su {
                             "chmod -R 777 mHook")
                             .execute(session);
                     initPath(context);
-                }else {
-                    Looper.prepare();
-                    RxToast.error("你需要ROOT权限才能正常使用MHOOK管理器");
-                    Looper.loop();
+                } else {
+                    // 无 root 设备静默跳过：沙箱免root脱壳不依赖 root，不再弹提示
                 }
             }
         }).start();

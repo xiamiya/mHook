@@ -1,2 +1,6 @@
 rootProject.name='mHook'
 include ':app',':library'
+include ':Bcore', ':black-reflection', ':compiler'
+project(':Bcore').projectDir = new File(rootDir, '../BlackBoxReborn/Bcore')
+project(':black-reflection').projectDir = new File(rootDir, '../BlackBoxReborn/black-reflection')
+project(':compiler').projectDir = new File(rootDir, '../BlackBoxReborn/compiler')

@@ -184,12 +184,15 @@ public class MKFixActivity extends BaseActivity {
                 if (datas.size()>0){
                     datas.clear();
                 }
-                for (File file: RxFileTool.listFilesInDir(mDir,false)){
-                    String filePath = file.getPath();
-                    if (RxFileTool.fileExists(filePath+"/fix/mk.apk")){
-                        String pkg = file.getName();
-                        if (pkg.contains(query)|| RxAppTool.getAppName(MKFixActivity.this,pkg).contains(query)){
-                            datas.add(new SelectAppItem(pkg,RxAppTool.getAppVersionName(MKFixActivity.this,pkg),RxAppTool.getAppName(MKFixActivity.this,pkg),false));
+                java.util.List<File> fileList = RxFileTool.listFilesInDir(mDir,false);
+                if (fileList != null) {
+                    for (File file : fileList) {
+                        String filePath = file.getPath();
+                        if (RxFileTool.fileExists(filePath+"/fix/mk.apk")){
+                            String pkg = file.getName();
+                            if (pkg.contains(query)|| RxAppTool.getAppName(MKFixActivity.this,pkg).contains(query)){
+                                datas.add(new SelectAppItem(pkg,RxAppTool.getAppVersionName(MKFixActivity.this,pkg),RxAppTool.getAppName(MKFixActivity.this,pkg),false));
+                            }
                         }
                     }
                 }

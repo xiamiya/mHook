@@ -58,6 +58,7 @@
         <activity android:name="cn.mhook.activity.selectapp.SelectActivity" />
         <activity android:name="cn.mhook.activity.mkfix.MKFixActivity" />
         <activity android:name="cn.mhook.activity.dump.DumpActivity" />
+        <activity android:name="cn.mhook.activity.SandboxDumpActivity" />
         <activity android:name="cn.mhook.activity.ai.AiActivity" android:launchMode="singleTop" />
         <activity android:name="cn.mhook.activity.ai.McpSettingActivity" />
         <activity android:name="cn.mhook.activity.xp.XpModuleAiActivity" />
