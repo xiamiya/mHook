@@ -35,14 +35,6 @@ public class IntroActivity extends MaterialIntroActivity {
                         .description("安卓应用行为检测分析，告别应用恶意行为，防止隐私泄露，第一时间发现应用程序异常行为及可疑操作。")
                         .build());
 
-        addSlide(new SlideFragmentBuilder()
-                        .backgroundColor(R.color.second_slide_background)
-                        .buttonsColor(R.color.second_slide_buttons)
-                        .image(R.mipmap.app)
-                        .title("沙箱脱壳（免root）")
-                        .description("选APK自动装入虚拟沙箱静默运行并dump dex，全程免root；自动打包zip导出，自动清理，兼容绝大多数应用。")
-                        .build());
-
         addSlide(new CustomSlide());
 
         addSlide(new Statement());
