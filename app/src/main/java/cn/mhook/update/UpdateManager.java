@@ -1,14 +1,13 @@
 package cn.mhook.update;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 
-import com.qmuiteam.qmui.skin.QMUISkinManager;
-import com.qmuiteam.qmui.widget.dialog.QMUIDialog;
-import com.qmuiteam.qmui.widget.dialog.QMUIDialogAction;
 import com.tamsiree.rxkit.view.RxToast;
 
 /**
@@ -87,13 +86,12 @@ public class UpdateManager {
     }
 
     private static void showUpToDate(Activity activity, String cur) {
-        new QMUIDialog.MessageDialogBuilder(activity)
+        new AlertDialog.Builder(activity)
                 .setTitle("已是最新版本")
                 .setMessage("当前已是最新版本 v" + cur)
-                .setSkinManager(QMUISkinManager.defaultInstance(activity))
-                .addAction("知道了", new QMUIDialogAction.ActionListener() {
+                .setPositiveButton("知道了", new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(QMUIDialog dialog, int index) {
+                    public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
                     }
                 })
@@ -101,20 +99,19 @@ public class UpdateManager {
     }
 
     private static void showError(Activity activity, Throwable t) {
-        new QMUIDialog.MessageDialogBuilder(activity)
+        new AlertDialog.Builder(activity)
                 .setTitle("检查更新失败")
                 .setMessage("无法获取最新版本信息：" + t.getMessage() + "\n请检查网络后重试。")
-                .setSkinManager(QMUISkinManager.defaultInstance(activity))
-                .addAction("重试", new QMUIDialogAction.ActionListener() {
+                .setPositiveButton("重试", new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(QMUIDialog dialog, int index) {
+                    public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
                         checkAndShow(activity, true);
                     }
                 })
-                .addAction(0, "取消", QMUIDialogAction.ACTION_PROP_NEGATIVE, new QMUIDialogAction.ActionListener() {
+                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(QMUIDialog dialog, int index) {
+                    public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
                     }
                 })
@@ -126,35 +123,34 @@ public class UpdateManager {
         msg.append("当前版本：v").append(currentVersion(activity)).append('\n');
         msg.append("最新版本：").append(info.tagName);
         if (info.publishedAt != null && info.publishedAt.length() >= 10) {
-            msg.append("（").append(info.publishedAt.substring(0, 10)).append("）");
+            msg.append("\n发布日期：").append(info.publishedAt.substring(0, 10));
         }
         if (info.body != null && !info.body.isEmpty()) {
             msg.append("\n\n────────── 更新日志 ──────────\n").append(info.body);
         }
-        QMUIDialog.MessageDialogBuilder builder = new QMUIDialog.MessageDialogBuilder(activity)
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity)
                 .setTitle("发现新版本 " + info.tagName)
                 .setMessage(msg.toString())
-                .setSkinManager(QMUISkinManager.defaultInstance(activity))
-                .addAction("暂不更新", new QMUIDialogAction.ActionListener() {
+                .setNegativeButton("暂不更新", new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(QMUIDialog dialog, int index) {
+                    public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
                     }
                 });
         // 仅启动自动检测提供"不再提示"
         if (!manual) {
-            builder.addAction("不再提示", new QMUIDialogAction.ActionListener() {
+            builder.setNeutralButton("不再提示", new DialogInterface.OnClickListener() {
                 @Override
-                public void onClick(QMUIDialog dialog, int index) {
+                public void onClick(DialogInterface dialog, int which) {
                     setIgnoredVersion(activity, info.tagName);
                     dialog.dismiss();
                     RxToast.info("已忽略该版本更新");
                 }
             });
         }
-        builder.addAction(0, "下载更新", QMUIDialogAction.ACTION_PROP_NEGATIVE, new QMUIDialogAction.ActionListener() {
+        builder.setPositiveButton("下载更新", new DialogInterface.OnClickListener() {
             @Override
-            public void onClick(QMUIDialog dialog, int index) {
+            public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
                 if (info.apkUrl == null) {
                     RxToast.warning("该版本发布内容没有 APK 附件");

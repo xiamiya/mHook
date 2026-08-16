@@ -1,97 +1,82 @@
 package cn.mhook.activity;
 
-import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentActivity;
-import androidx.viewpager2.adapter.FragmentStateAdapter;
-import androidx.viewpager2.widget.ViewPager2;
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
-import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
-import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
-import com.qmuiteam.qmui.util.QMUIDisplayHelper;
-import com.qmuiteam.qmui.widget.QMUIProgressBar;
-import com.qmuiteam.qmui.widget.tab.QMUITabBuilder;
-import com.qmuiteam.qmui.widget.tab.QMUITabIndicator;
-import com.qmuiteam.qmui.widget.tab.QMUITabSegment2;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
+
 import com.tamsiree.rxkit.RxAppTool;
-import com.tamsiree.rxkit.RxFileTool;
 import com.tamsiree.rxkit.RxSPTool;
-import com.tamsiree.rxkit.RxTimeTool;
-import com.tamsiree.rxkit.view.RxToast;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
-import java.io.File;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import cn.mhook.BaseActivity;
-import cn.mhook.activity.intro.IntroActivity;
-import cn.mhook.fragment.MainFragment;
+
+import cn.mhook.fragment.HomePageBuilder;
 import cn.mhook.mData;
 import cn.mhook.mhook.EventMessage;
 import cn.mhook.mhook.R;
 
-import static cn.mhook.mData.mDir;
+public class MainActivity extends Activity {
 
-public class MainActivity extends BaseActivity {
-
-    private QMUITabSegment2 qmuiTabSegment;
-    private List<Fragment> mFragments;
-    private ViewPager2 viewPager;
-    private Context context;
-    private QMUIProgressBar qmuiProgressBar;
-    private ImageView xpStatus;
-    private Handler handler;
-    BatteryManager batteryManager ;
-    private TextView time;
+    private final int[] tabIds = {R.id.tab_0, R.id.tab_1, R.id.tab_2, R.id.tab_3};
+    private final int[] tabIconIds = {R.id.tab_icon_0, R.id.tab_icon_1, R.id.tab_icon_2, R.id.tab_icon_3};
+    private final int[] tabLabelIds = {R.id.tab_label_0, R.id.tab_label_1, R.id.tab_label_2, R.id.tab_label_3};
+    private final List<View> pages = new ArrayList<>();
     public static Activity activity;
+    private int currentPage = 0;
+    private ViewPager2 viewPager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if (!RxSPTool.getBoolean(this,"noIntro")){
-            Intent intent = new Intent(this, IntroActivity.class);
-            this.startActivity(intent);
-            finish();
-        }
-       /* getWindow().setSoftInputMode(
-                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE| WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);*/
         activity = this;
+        getWindow().setBackgroundDrawableResource(R.drawable.bg_home_gradient);
+        getWindow().setNavigationBarColor(getResources().getColor(R.color.glass_bg_bottom));
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_IMMERSIVE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN);
+
         setContentView(R.layout.activity_main);
         EventBus.getDefault().register(this);
-        context = this;
-        xpStatus = findViewById(R.id.xp_status);
-        batteryManager =  (BatteryManager)getSystemService(BATTERY_SERVICE);
-        if (xp()){
-            xpStatus.setColorFilter(getResources().getColor(R.color.green));
+
+        viewPager = findViewById(R.id.page_host);
+        for (int i = 0; i < 4; i++) {
+            View page = HomePageBuilder.build(this, viewPager, i);
+            pages.add(page);
         }
-        handler = new Handler();
-        qmuiProgressBar = findViewById(R.id.batter);
-        qmuiProgressBar.setQMUIProgressBarTextGenerator(new QMUIProgressBar.QMUIProgressBarTextGenerator() {
+        viewPager.setAdapter(new PageAdapter());
+        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
-            public String generateText(QMUIProgressBar progressBar, int value, int maxValue) {
-                return 100 * value / maxValue +"";
+            public void onPageSelected(int position) {
+                currentPage = position;
+                updateTabUi(position);
             }
         });
-        qmuiProgressBar.setProgress(80);
-        time = findViewById(R.id.time);
-        handler.post(task);
-        initViewPager();
+        FrameLayout tabPill = findViewById(R.id.tab_pill);
+        if (tabPill != null) {
+            cn.mhook.widget.GlassShadows.apply(tabPill, 28f, 8f);
+        }
+        initTabs();
+        viewPager.setCurrentItem(0, false);
         startAppInfo();
         // 启动时自动检查更新（有新版才弹窗，已忽略的版本不提示）
-        handler.postDelayed(new Runnable() {
+        new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -102,124 +87,94 @@ public class MainActivity extends BaseActivity {
                 }
             }
         }, 2500);
-      //initTab();
     }
 
-
-
-    private Runnable task =new Runnable() {
-        public void run() {
-
-            // TODOAuto-generated method stub
-            handler.postDelayed(this,1*1000);//设置延迟时间，此处是5秒
-            //需要执行的代码
-            time.setText(RxTimeTool.getCurTimeString(new SimpleDateFormat("HH:mm:ss")));
-            qmuiProgressBar.setProgress(batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY));
+    private void initTabs() {
+        for (int i = 0; i < tabIds.length; i++) {
+            final LinearLayout tab = findViewById(tabIds[i]);
+            final int index = i;
+            tab.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    selectPage(index);
+                }
+            });
         }
-    };
+    }
 
-    private void startAppInfo(){
-        new Thread(new Runnable(){
+    private void selectPage(int index) {
+        if (index < 0 || index >= pages.size()) {
+            return;
+        }
+        viewPager.setCurrentItem(index, true);
+    }
+
+    private void updateTabUi(int index) {
+        for (int i = 0; i < tabIds.length; i++) {
+            boolean selected = i == index;
+            LinearLayout tab = findViewById(tabIds[i]);
+            tab.setBackgroundResource(selected ? R.drawable.bg_tab_active : 0);
+            ImageView icon = findViewById(tabIconIds[i]);
+            TextView label = findViewById(tabLabelIds[i]);
+            int color = selected ? R.color.glass_text_primary : R.color.glass_text_secondary;
+            if (icon != null) {
+                icon.setColorFilter(getResources().getColor(color));
+            }
+            if (label != null) {
+                label.setTextColor(getResources().getColor(color));
+            }
+        }
+    }
+
+    private void startAppInfo() {
+        new Thread(new Runnable() {
             @Override
-            public void run(){
-                //处理事务
+            public void run() {
                 mData.appInfos = RxAppTool.getAllAppsInfo(MainActivity.this);
             }
         }).start();
     }
 
-    private Boolean xp(){
-        return false;
-    }
-
-    private void initViewPager(){
-        viewPager = findViewById(R.id.contentViewPager);
-        mFragments = new ArrayList<>();
-        mFragments.add(new MainFragment());
-
-
-
-     //   mFragments.add(new MeFragment());
-        viewPager.setAdapter(new  MyFragmentPagerAdapter(this,mFragments));
-        viewPager.setOffscreenPageLimit(2);
-        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-            /**
-             * This method will be invoked when a new page becomes selected. Animation is not
-             * necessarily complete.
-             *
-             * @param position Position index of the new selected page.
-             */
-            @Override
-            public void onPageSelected(int position) {
-                super.onPageSelected(position);
-                switch (position){
-                    case 0:
-                        viewPager.setUserInputEnabled(true);
-                        break;
-                    case 1:
-                        viewPager.setUserInputEnabled(false);
-                        break;
-                }
-            }
-        });
-    }
-
-    private void initTab(){
-        qmuiTabSegment = findViewById(R.id.tabSegment);
-        QMUITabBuilder tabBuilder = qmuiTabSegment.tabBuilder()
-                .setGravity(Gravity.CENTER);
-        tabBuilder.setDynamicChangeIconColor(true)
-                .setTextSize(
-                        QMUIDisplayHelper.sp2px(context, 13),
-                        QMUIDisplayHelper.sp2px(context, 16))
-                .setSelectedIconScale(1.1f);
-        qmuiTabSegment.setIndicator(new QMUITabIndicator(
-                QMUIDisplayHelper.dp2px(this, 2), false, false));
-        qmuiTabSegment.addTab(tabBuilder
-                .setNormalDrawable(ContextCompat.getDrawable(context, R.drawable.home))
-                .build(this));
-        qmuiTabSegment.addTab(tabBuilder
-                .setNormalDrawable(ContextCompat.getDrawable(context, R.drawable.sq))
-                .build(this));
-      /*  qmuiTabSegment.addTab(tabBuilder
-                .setNormalDrawable(ContextCompat.getDrawable(context, R.drawable.me))
-                .build(this));*/
-        qmuiTabSegment.setupWithViewPager(viewPager);
-        qmuiTabSegment.notifyDataChanged();
-        qmuiTabSegment.selectTab(0);
-        qmuiTabSegment.setVisibility(View.GONE);
-    }
-
-    class MyFragmentPagerAdapter extends FragmentStateAdapter {
-
-        private List<Fragment> mFragments;
-
-        public MyFragmentPagerAdapter(@NonNull FragmentActivity fragmentActivity, List<Fragment> fragments) {
-            super(fragmentActivity);
-            this.mFragments = fragments;
-        }
-        @NonNull
-        @Override
-        public Fragment createFragment(int position) {
-            return mFragments.get(position);
-        }
-        @Override
-        public int getItemCount() {
-            return mFragments.size();
-        }
-    }
-
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onReceiveMsg(final EventMessage message) {
-        if (message.getType().equals("goHome")){
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    viewPager.setCurrentItem(0);
-                }
-            }, 0);
+        if (message.getType().equals("goHome")) {
+            selectPage(0);
         }
     }
 
+    /** 主页 4 页适配器：每页即 HomePageBuilder 构建的 View。 */
+    private class PageAdapter extends RecyclerView.Adapter<PageHolder> {
+        @NonNull
+        @Override
+        public PageHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            FrameLayout container = new FrameLayout(MainActivity.this);
+            container.setLayoutParams(new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            return new PageHolder(container);
+        }
 
+        @Override
+        public void onBindViewHolder(@NonNull PageHolder holder, int position) {
+            View page = pages.get(position);
+            if (page.getParent() != null) {
+                ((ViewGroup) page.getParent()).removeView(page);
+            }
+            holder.container.removeAllViews();
+            holder.container.addView(page);
+        }
+
+        @Override
+        public int getItemCount() {
+            return pages.size();
+        }
+    }
+
+    private static class PageHolder extends RecyclerView.ViewHolder {
+        final FrameLayout container;
+
+        PageHolder(FrameLayout container) {
+            super(container);
+            this.container = container;
+        }
+    }
 }

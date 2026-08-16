@@ -1,126 +1,115 @@
 package cn.mhook.activity.ai;
 
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
-
-import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.qmuiteam.qmui.skin.QMUISkinManager;
-import com.qmuiteam.qmui.widget.dialog.QMUIDialog;
-import com.qmuiteam.qmui.widget.dialog.QMUIDialogAction;
-import com.qmuiteam.qmui.widget.grouplist.QMUICommonListItemView;
-import com.qmuiteam.qmui.widget.grouplist.QMUIGroupListView;
 import com.tamsiree.rxkit.view.RxToast;
 
 import java.util.regex.Pattern;
 
-import cn.mhook.BaseActivity;
 import cn.mhook.ai.McpClient;
 import cn.mhook.ai.McpManager;
 import cn.mhook.ai.McpSetting;
 import cn.mhook.mhook.R;
 
-public class McpSettingActivity extends BaseActivity {
+public class McpSettingActivity extends Activity {
 
-    QMUIGroupListView mGroupListView;
+    private LinearLayout serverList;
+    private LinearLayout opList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_mcp_setting);
-        mGroupListView = findViewById(R.id.groupListView);
+        serverList = findViewById(R.id.server_list);
+        opList = findViewById(R.id.op_list);
+        findViewById(R.id.btn_back).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
         refresh();
     }
 
     private void refresh() {
-        mGroupListView.removeAllViews();
+        serverList.removeAllViews();
+        opList.removeAllViews();
         final JSONArray servers = McpSetting.getServers(this);
-
-        QMUIGroupListView.Section section = QMUIGroupListView.newSection(this).setTitle("服务器列表");
         for (Object o : servers) {
             final JSONObject s = (JSONObject) o;
-            section.addItemView(getServerItem(servers, s), new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    toggleEnable(servers, s);
-                }
-            });
+            serverList.addView(buildServerRow(servers, s));
         }
-        section.addTo(mGroupListView);
-
-        QMUIGroupListView.Section ops = QMUIGroupListView.newSection(this).setTitle("操作");
-        ops.addItemView(getOpItem("添加自定义服务器", "新增任意 MCP 后端，支持自定义地址与 Token"), new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                addServer();
-            }
-        });
-        ops.addItemView(getOpItem("一键探测并启用", "自动匹配 MT/玄星逆核/ProxyPin 候选端口"), new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                probeAll();
-            }
-        });
-        ops.addItemView(getOpItem("使用说明", "需先在 MT管理器/玄星逆核/ProxyPin 内启动 MCP 服务"), new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                RxToast.info("请先在对应 App 内启动 MCP 服务并保持运行");
-            }
-        });
-        ops.addTo(mGroupListView);
+        buildOpItems();
     }
 
-    private QMUICommonListItemView getServerItem(final JSONArray servers, final JSONObject s) {
-        String title = labelOf(s);
-        boolean enabled = s.getBooleanValue("enable");
-        String detail = (s.getString("url") == null ? "" : s.getString("url"))
-                + "\n" + (enabled ? "已启用" : "未启用") + "（点击切换，长按管理）";
-        final QMUICommonListItemView item = mGroupListView.createItemView(
-                null, title, detail,
-                QMUICommonListItemView.VERTICAL,
-                QMUICommonListItemView.ACCESSORY_TYPE_NONE,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-        item.getDetailTextView().setTextColor(getResources().getColor(
-                enabled ? R.color.green : R.color.qmui_config_color_75_pure_black));
-        applyItemSpacing(item);
-        item.setOnLongClickListener(new View.OnLongClickListener() {
+    private View buildServerRow(final JSONArray servers, final JSONObject s) {
+        View row = LayoutInflater.from(this).inflate(R.layout.item_mcp_server, serverList, false);
+        ((TextView) row.findViewById(R.id.server_name)).setText(labelOf(s));
+        ((TextView) row.findViewById(R.id.server_url)).setText(s.getString("url"));
+        applyToggle(row.findViewById(R.id.server_toggle), row.findViewById(R.id.server_toggle_knob),
+                s.getBooleanValue("enable"));
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleEnable(servers, s);
+            }
+        });
+        row.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
                 showServerMenu(servers, s);
                 return true;
             }
         });
-        return item;
+        return row;
     }
 
-    private QMUICommonListItemView getOpItem(String title, String detail) {
-        QMUICommonListItemView item = mGroupListView.createItemView(
-                null, title, detail,
-                QMUICommonListItemView.VERTICAL,
-                QMUICommonListItemView.ACCESSORY_TYPE_NONE,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-        applyItemSpacing(item);
-        return item;
+    private void buildOpItems() {
+        addOp("添加自定义服务器", "新增任意 MCP 后端，支持自定义地址与 Token",
+                R.drawable.ic_add, R.color.glass_accent_green, new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        addServer();
+                    }
+                });
+        addOp("一键探测并启用", "自动匹配 MT/玄星逆核/ProxyPin 候选端口",
+                R.drawable.ic_analyze, R.color.glass_accent_cyan, new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        probeAll();
+                    }
+                });
+        addOp("使用说明", "需先在 MT管理器/玄星逆核/ProxyPin 内启动 MCP 服务",
+                R.drawable.ic_help, R.color.glass_text_secondary, new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        cn.mhook.widget.GlassToast.info(McpSettingActivity.this, "请先在对应 App 内启动 MCP 服务并保持运行");
+                    }
+                });
     }
 
-    private void applyItemSpacing(QMUICommonListItemView item) {
-        TextView detailView = item.getDetailTextView();
-        detailView.setLineSpacing(0f, 1.0f);
-        ConstraintLayout.LayoutParams dlp =
-                (ConstraintLayout.LayoutParams) detailView.getLayoutParams();
-        dlp.topMargin = (int) (getResources().getDisplayMetrics().density * 2);
-        detailView.setLayoutParams(dlp);
-        int density = (int) getResources().getDisplayMetrics().density;
-        item.setPadding(item.getPaddingLeft(),
-                item.getPaddingTop() + density * 10,
-                item.getPaddingRight(),
-                item.getPaddingBottom() + density * 12);
+    private void addOp(String title, String desc, int iconRes, int colorRes, View.OnClickListener listener) {
+        View row = LayoutInflater.from(this).inflate(R.layout.item_mcp_op, opList, false);
+        ((TextView) row.findViewById(R.id.op_title)).setText(title);
+        ((TextView) row.findViewById(R.id.op_desc)).setText(desc);
+        ImageView ic = (ImageView) ((FrameLayout) row.findViewById(R.id.op_icon)).getChildAt(0);
+        ic.setImageResource(iconRes);
+        ic.setColorFilter(getResources().getColor(colorRes));
+        row.setOnClickListener(listener);
+        opList.addView(row);
     }
 
     private String labelOf(JSONObject s) {
@@ -135,35 +124,44 @@ public class McpSettingActivity extends BaseActivity {
         McpSetting.saveServers(this, servers);
         McpManager.resetClients();
         refresh();
-        RxToast.info((en ? "已启用 " : "已禁用 ") + labelOf(s));
+        cn.mhook.widget.GlassToast.info(McpSettingActivity.this, (en ? "已启用 " : "已禁用 ") + labelOf(s));
+    }
+
+    private void applyToggle(View toggle, View knob, boolean on) {
+        if (toggle == null) {
+            return;
+        }
+        float travel = 20 * getResources().getDisplayMetrics().density;
+        if (on) {
+            toggle.getBackground().setTint(getResources().getColor(R.color.glass_accent_green));
+            if (knob != null) {
+                knob.setTranslationX(travel);
+            }
+        } else {
+            toggle.getBackground().setTint(0x80B4AA9B);
+            if (knob != null) {
+                knob.setTranslationX(0f);
+            }
+        }
     }
 
     private void showServerMenu(final JSONArray servers, final JSONObject s) {
-        QMUIDialog.MenuDialogBuilder builder = new QMUIDialog.MenuDialogBuilder(this)
+        new AlertDialog.Builder(this)
                 .setTitle(labelOf(s))
-                .setSkinManager(QMUISkinManager.defaultInstance(this));
-        builder.addItem("编辑", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-                editServer(servers, s);
-            }
-        });
-        builder.addItem("测试连接", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-                testServer(servers, s);
-            }
-        });
-        builder.addItem("删除", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-                deleteServer(servers, s);
-            }
-        });
-        builder.create().show();
+                .setItems(new String[]{"编辑", "测试连接", "删除"}, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                        if (which == 0) {
+                            editServer(servers, s);
+                        } else if (which == 1) {
+                            testServer(servers, s);
+                        } else {
+                            deleteServer(servers, s);
+                        }
+                    }
+                })
+                .create().show();
     }
 
     private void editServer(final JSONArray servers, final JSONObject s) {
@@ -192,7 +190,7 @@ public class McpSettingActivity extends BaseActivity {
                                     return;
                                 }
                                 if (!Pattern.matches("[A-Za-z0-9_]+", val)) {
-                                    RxToast.error("名称只能包含字母/数字/下划线");
+                                    cn.mhook.widget.GlassToast.error(McpSettingActivity.this, "名称只能包含字母/数字/下划线");
                                     promptField(0, draft, target);
                                     return;
                                 }
@@ -208,7 +206,7 @@ public class McpSettingActivity extends BaseActivity {
                             public void onResult(String v) {
                                 String val = v.trim();
                                 if (val.isEmpty()) {
-                                    RxToast.error("地址不能为空");
+                                    cn.mhook.widget.GlassToast.error(McpSettingActivity.this, "地址不能为空");
                                     promptField(1, draft, target);
                                     return;
                                 }
@@ -237,11 +235,11 @@ public class McpSettingActivity extends BaseActivity {
             String newName = draft.getString("name");
             JSONObject stored = findInArray(servers, oldName);
             if (stored == null) {
-                RxToast.error("目标服务器不存在，请返回重试");
+                cn.mhook.widget.GlassToast.error(McpSettingActivity.this, "目标服务器不存在，请返回重试");
                 return;
             }
             if (!newName.equals(oldName) && findInArray(servers, newName) != null) {
-                RxToast.error("已存在同名服务器");
+                cn.mhook.widget.GlassToast.error(McpSettingActivity.this, "已存在同名服务器");
                 return;
             }
             stored.put("name", newName);
@@ -252,7 +250,7 @@ public class McpSettingActivity extends BaseActivity {
             }
         } else {
             if (McpSetting.findServer(this, draft.getString("name")) != null) {
-                RxToast.error("已存在同名服务器");
+                cn.mhook.widget.GlassToast.error(McpSettingActivity.this, "已存在同名服务器");
                 return;
             }
             if (draft.getString("label") == null || draft.getString("label").isEmpty()) {
@@ -263,7 +261,7 @@ public class McpSettingActivity extends BaseActivity {
         McpSetting.saveServers(this, servers);
         McpManager.resetClients();
         refresh();
-        RxToast.success(target != null ? "已保存" : "已添加 " + draft.getString("name"));
+        cn.mhook.widget.GlassToast.success(McpSettingActivity.this, target != null ? "已保存" : "已添加 " + draft.getString("name"));
     }
 
     private static JSONObject findInArray(JSONArray arr, String name) {
@@ -277,19 +275,18 @@ public class McpSettingActivity extends BaseActivity {
     }
 
     private void deleteServer(final JSONArray servers, final JSONObject s) {
-        new QMUIDialog.MessageDialogBuilder(this)
+        new AlertDialog.Builder(this)
                 .setTitle("删除服务器")
                 .setMessage("确定要删除 " + labelOf(s) + " 吗？")
-                .setSkinManager(QMUISkinManager.defaultInstance(this))
-                .addAction("取消", new QMUIDialogAction.ActionListener() {
+                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(QMUIDialog dialog, int index) {
+                    public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
                     }
                 })
-                .addAction(0, "删除", QMUIDialogAction.ACTION_PROP_NEGATIVE, new QMUIDialogAction.ActionListener() {
+                .setPositiveButton("删除", new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(QMUIDialog dialog, int index) {
+                    public void onClick(DialogInterface dialog, int which) {
                         servers.remove(s);
                         McpSetting.saveServers(McpSettingActivity.this, servers);
                         McpManager.resetClients();
@@ -304,7 +301,7 @@ public class McpSettingActivity extends BaseActivity {
         final String name = s.getString("name");
         final String url = s.getString("url");
         final String token = s.getString("token");
-        RxToast.info("正在测试 " + name + " …");
+        cn.mhook.widget.GlassToast.info(McpSettingActivity.this, "正在测试 " + name + " …");
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -313,9 +310,9 @@ public class McpSettingActivity extends BaseActivity {
                     @Override
                     public void run() {
                         if (msg.startsWith("连接成功")) {
-                            RxToast.success(msg);
+                            cn.mhook.widget.GlassToast.success(McpSettingActivity.this, msg);
                         } else {
-                            RxToast.error(msg);
+                            cn.mhook.widget.GlassToast.error(McpSettingActivity.this, msg);
                         }
                     }
                 });
@@ -335,7 +332,7 @@ public class McpSettingActivity extends BaseActivity {
     }
 
     private void probeAll() {
-        RxToast.info("探测中…");
+        cn.mhook.widget.GlassToast.info(McpSettingActivity.this, "探测中…");
         final JSONArray servers = McpSetting.getServers(this);
         new Thread(new Runnable() {
             @Override
@@ -347,7 +344,7 @@ public class McpSettingActivity extends BaseActivity {
                         McpSetting.saveServers(McpSettingActivity.this, servers);
                         McpManager.resetClients();
                         refresh();
-                        RxToast.success("探测完成，可用后端已启用");
+                        cn.mhook.widget.GlassToast.success(McpSettingActivity.this, "探测完成，可用后端已启用");
                     }
                 });
             }
@@ -355,29 +352,31 @@ public class McpSettingActivity extends BaseActivity {
     }
 
     private void showInput(String title, String placeholder, String def, final InputCallback cb) {
-        final QMUIDialog.EditTextDialogBuilder builder = new QMUIDialog.EditTextDialogBuilder(this);
-        builder.setTitle(title)
-                .setSkinManager(QMUISkinManager.defaultInstance(this))
-                .setPlaceholder(placeholder)
-                .setDefaultText(def == null ? "" : def);
+        final EditText et = new EditText(this);
+        et.setHint(placeholder);
+        et.setHintTextColor(getResources().getColor(R.color.glass_text_tertiary));
+        et.setTextColor(getResources().getColor(R.color.glass_text_primary));
+        et.setText(def == null ? "" : def);
+        et.setBackgroundResource(R.drawable.bg_input_glass);
+        int density = (int) getResources().getDisplayMetrics().density;
+        et.setPadding(density * 16, density * 12, density * 16, density * 12);
         if (title != null && title.contains("Token")) {
-            builder.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         }
-        builder.addAction("取消", new QMUIDialogAction.ActionListener() {
-            @Override
-            public void onClick(QMUIDialog dialog, int index) {
-                dialog.dismiss();
-            }
-        });
-        builder.addAction("确定", new QMUIDialogAction.ActionListener() {
-            @Override
-            public void onClick(QMUIDialog dialog, int index) {
-                CharSequence t = builder.getEditText().getText();
-                dialog.dismiss();
-                cb.onResult(t == null ? "" : t.toString());
-            }
-        });
-        builder.create().show();
+        android.widget.FrameLayout wrap = new android.widget.FrameLayout(this);
+        wrap.setPadding(density * 20, density * 8, density * 20, 0);
+        wrap.addView(et);
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(wrap)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        cb.onResult(et.getText() == null ? "" : et.getText().toString());
+                    }
+                })
+                .create().show();
     }
 
     private interface InputCallback {

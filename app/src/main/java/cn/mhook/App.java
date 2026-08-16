@@ -30,22 +30,26 @@ public class App {
     }
 
     public static void setEnable(String type,Boolean enadle){
-        if (RxFileTool.fileExists(path)){
-            String cfg = RxFileTool.readFile2String(path,"utf-8");
-            if (cfg!=null&&!cfg.isEmpty()){
-                try {
-                    JSONObject appCfg = JSONObject.parseObject(cfg);
-                    appCfg.put(type,enadle);
-                    RxFileTool.writeFileFromString(path,appCfg.toJSONString(),false);
-                }catch (Throwable throwable){
-                    Log.i("err",throwable.getMessage());
+        try {
+            if (RxFileTool.fileExists(path)){
+                String cfg = RxFileTool.readFile2String(path,"utf-8");
+                if (cfg!=null&&!cfg.isEmpty()){
+                    try {
+                        JSONObject appCfg = JSONObject.parseObject(cfg);
+                        appCfg.put(type,enadle);
+                        RxFileTool.writeFileFromString(path,appCfg.toJSONString(),false);
+                    }catch (Throwable throwable){
+                        Log.i("err",throwable.getMessage());
+                    }
                 }
+            }else {
+                JSONObject appCfg = new JSONObject();
+                appCfg.put(type,enadle);
+                RxFileTool.writeFileFromString(path,appCfg.toJSONString(),false);
+                set777();
             }
-        }else {
-            JSONObject appCfg = new JSONObject();
-            appCfg.put(type,enadle);
-            RxFileTool.writeFileFromString(path,appCfg.toJSONString(),false);
-            set777();
+        } catch (Throwable t) {
+            Log.e("App", "setEnable err: " + t.getMessage());
         }
     }
 }

@@ -1,148 +1,186 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.qmuiteam.qmui.widget.QMUIWindowInsetLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="cn.mhook.activity.hook.HookActivity"
-    android:background="@color/white">
+    android:background="@drawable/bg_home_gradient"
+    android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="12dp"
+        android:paddingRight="20dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="8dp">
 
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+        <ImageView
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackgroundBorderless"
+            android:padding="8dp"
+            android:src="@drawable/ic_back"
+            android:tint="@color/glass_text_primary" />
 
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:layout_weight="1"
+            android:text="自定义HOOK"
+            android:textColor="@color/glass_text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
-            <ImageView
-                android:id="@+id/addHook"
-                android:layout_width="25dp"
-                android:layout_height="wrap_content"
-                android:layout_alignParentRight="true"
-                android:layout_centerVertical="true"
-                android:layout_marginTop="10dp"
-                android:layout_marginRight="20dp"
-                app:srcCompat="@mipmap/add_p"
-                app:tint="@color/blue"
-                android:visibility="invisible"/>
-
-            <TextView
-                android:id="@+id/title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
-                android:layout_marginLeft="20dp"
-                android:layout_marginTop="10dp"
-                android:text="自定义HOOK"
-                android:textSize="16dp"
-                android:textStyle="bold" />
-        </RelativeLayout>
-
-        <LinearLayout
-            android:id="@+id/selectBar"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:orientation="horizontal"
-            android:background="@color/blue"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/selectAll"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:text="全选"
-                android:textColor="@color/white"
-                android:textSize="15dp"/>
-
-            <TextView
-                android:id="@+id/shareSelected"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:text="分享"
-                android:textColor="@color/white"
-                android:textSize="15dp"/>
-
-            <TextView
-                android:id="@+id/deleteSelected"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:text="删除"
-                android:textColor="@color/white"
-                android:textSize="15dp"/>
-
-            <TextView
-                android:id="@+id/exitSelect"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:text="退出"
-                android:textColor="@color/white"
-                android:textSize="15dp"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
-
-            <com.arlib.floatingsearchview.FloatingSearchView
-                android:id="@+id/floating_search_view"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                app:floatingSearch_leftActionMode="showSearch"
-                app:floatingSearch_dismissOnOutsideTouch="true"
-                app:floatingSearch_searchHint="查询内容"
-                app:floatingSearch_showSearchKey="true"
-                app:floatingSearch_suggestionsListAnimDuration="250"
-                app:floatingSearch_dimBackground="false"
-                app:floatingSearch_close_search_on_keyboard_dismiss="false"
-                android:layout_marginLeft="10dp"
-                android:layout_marginRight="10dp"/>
-
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent">
-
-                <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-                    android:id="@+id/refresh_layout"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_marginTop="10dp">
-
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/config_recycler_view"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
-
-                </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
-                <com.nightonke.boommenu.BoomMenuButton
-                    android:id="@+id/bmb"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:layout_alignParentRight="true"
-                    android:layout_alignParentBottom="true"
-                    app:bmb_normalColor="@android:color/white"
-                    app:bmb_highlightedColor="@android:color/darker_gray"
-                    app:bmb_buttonEnum="ham"
-app:bmb_piecePlaceEnum="piecePlace_ham_3"
-app:bmb_buttonPlaceEnum="buttonPlace_ham_3"
-                    app:bmb_pieceCornerRadius="2dp"
-                    android:layout_margin="15dp" />
-            </RelativeLayout>
-
-
-        </LinearLayout>
+        <TextView
+            android:id="@+id/btn_add"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_glass_btn"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="＋ 添加配置"
+            android:textColor="@color/glass_accent_orange"
+            android:textSize="13sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-</com.qmuiteam.qmui.widget.QMUIWindowInsetLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp">
+
+        <TextView
+            android:id="@+id/btn_clipboard"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_marginRight="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_glass_btn"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="剪贴板导入"
+            android:textColor="@color/glass_text_secondary"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/btn_network"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_marginLeft="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_glass_btn"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="网络导入"
+            android:textColor="@color/glass_text_secondary"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <com.arlib.floatingsearchview.FloatingSearchView
+        android:id="@+id/floating_search_view"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="4dp"
+        app:floatingSearch_backgroundColor="@color/glass_bg_top"
+        app:floatingSearch_close_search_on_keyboard_dismiss="false"
+        app:floatingSearch_dimBackground="false"
+        app:floatingSearch_dismissOnOutsideTouch="true"
+        app:floatingSearch_hintTextColor="@color/glass_text_secondary"
+        app:floatingSearch_leftActionMode="showSearch"
+        app:floatingSearch_searchHint="查询内容"
+        app:floatingSearch_showSearchKey="true"
+        app:floatingSearch_suggestionsListAnimDuration="250"
+        app:floatingSearch_viewTextColor="@color/glass_text_primary"
+        app:floatingSearch_viewSearchInputTextColor="@color/glass_text_primary" />
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/refresh_layout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="6dp"
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/config_recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:clipToPadding="false"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="12dp" />
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <LinearLayout
+        android:id="@+id/selectBar"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/bg_glass_card"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/selectAll"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="全选"
+            android:textColor="@color/glass_text_primary"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/shareSelected"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="分享"
+            android:textColor="@color/glass_text_primary"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/deleteSelected"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="删除"
+            android:textColor="@color/glass_accent_red"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/exitSelect"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="退出"
+            android:textColor="@color/glass_text_secondary"
+            android:textSize="14sp" />
+    </LinearLayout>
+</LinearLayout>

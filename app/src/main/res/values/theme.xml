@@ -189,5 +189,35 @@
         <item name="app_skin_progress_bar_progress_color">@color/qmui_config_color_gray_1</item>
     </style>
 
+    <!-- 主页面独立主题：纯系统 Material，不依赖 QMUI/AppCompat，规避 QMUI 窗口白层问题 -->
+    <style name="Theme.MHookGlass" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/bg_home_gradient</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/glass_bg_bottom</item>
+        <item name="android:colorAccent">@color/glass_accent_orange</item>
+        <item name="android:colorControlHighlight">#35EA580C</item>
+        <item name="android:textColorPrimary">@color/glass_text_primary</item>
+        <item name="android:textColorSecondary">@color/glass_text_secondary</item>
+        <item name="android:alertDialogTheme">@style/Theme.MHookDialog</item>
+    </style>
+
+    <!-- 玻璃拟态弹窗：暖色背景 + 橙强调，替代默认蓝色 -->
+    <style name="Theme.MHookDialog" parent="android:Theme.Material.Light.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/bg_dialog_glass</item>
+        <item name="android:colorAccent">@color/glass_accent_orange</item>
+        <item name="android:colorControlHighlight">#35EA580C</item>
+        <item name="android:textColorPrimary">@color/glass_text_primary</item>
+        <item name="android:textColorSecondary">@color/glass_text_secondary</item>
+        <item name="android:buttonBarButtonStyle">@style/Widget.MHook.DialogButton</item>
+    </style>
+
+    <!-- 弹窗按钮：暖色文字 -->
+    <style name="Widget.MHook.DialogButton" parent="android:Widget.Material.Light.Button.Borderless.Small">
+        <item name="android:textColor">@color/glass_accent_orange</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 
 </resources>

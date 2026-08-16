@@ -1,6 +1,7 @@
 package cn.mhook.activity.selectapp;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -24,10 +25,9 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import cn.mhook.BaseActivity;
 import cn.mhook.mhook.R;
 
-public class SelectActivity extends BaseActivity {
+public class SelectActivity extends Activity {
 
     private RecyclerView recyclerView;
     private SwipeRefreshLayout refreshLayout;
@@ -51,6 +51,12 @@ public class SelectActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_select_app);
+        findViewById(R.id.btn_back).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
         handler = new Handler();
         initListView();
     }

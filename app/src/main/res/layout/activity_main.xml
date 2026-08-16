@@ -1,95 +1,146 @@
-<com.qmuiteam.qmui.widget.QMUIWindowInsetLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_home_gradient">
 
-    <RelativeLayout
+    <!-- 背景：暖色渐变 -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/page_host"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_home_gradient" />
 
-        <RelativeLayout
-            android:id="@+id/statuBar"
-            android:layout_width="match_parent"
-            android:layout_height="30dp"
-            android:background="@color/white"
-            android:layout_alignParentTop="true">
-            <LinearLayout
-                android:id="@+id/status"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_marginLeft="17dp"
-                android:layout_marginTop="10dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:layout_centerVertical="true">
-
-                <com.qmuiteam.qmui.widget.QMUIProgressBar
-                    android:id="@+id/batter"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:textColor="?attr/qmui_config_color_gray_4"
-                    android:textSize="7sp"
-                    app:qmui_background_color="?attr/qmui_config_color_gray_8"
-                    app:qmui_progress_color="@color/blue"
-                    app:qmui_stroke_width="3dp"
-                    app:qmui_type="type_circle"
-                    app:qmui_skin_background="?attr/app_skin_progress_bar_bg_color"
-                    app:qmui_skin_progress_color="?attr/app_skin_progress_bar_progress_color"
-                    app:qmui_skin_text_color="?attr/app_skin_progress_bar_text_color"
-                    android:layout_marginLeft="4dp"/>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_alignParentRight="true"
-                android:layout_marginTop="10dp"
-                android:layout_marginRight="17dp"
-                android:gravity="center"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/time"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:text="16:53"
-                    android:textSize="15dp"
-                    android:textColor="@color/text"
-                    android:layout_marginRight="5dp"/>
-
-                <ImageView
-                    android:id="@+id/xp_status"
-                    android:layout_width="12dp"
-                    android:layout_height="12dp"
-                    android:src="@mipmap/status"/>
-
-            </LinearLayout>
-        </RelativeLayout>
-
+    <!-- 悬浮玻璃胶囊 Tab 栏 -->
+    <FrameLayout
+        android:id="@+id/tab_pill"
+        android:layout_width="wrap_content"
+        android:layout_height="64dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_tab_pill">
 
         <LinearLayout
-            android:layout_below="@+id/statuBar"
-            android:layout_width="match_parent"
+            android:id="@+id/tab_bar"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:background="@color/qmui_config_color_white"
-            android:orientation="vertical">
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/contentViewPager"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"/>
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingLeft="6dp"
+            android:paddingRight="6dp">
 
-            <com.qmuiteam.qmui.widget.tab.QMUITabSegment2
-                android:id="@+id/tabSegment"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:background="@color/qmui_config_color_white"
-                app:qmui_bottomDividerColor="?attr/qmui_skin_support_color_separator"
-                app:qmui_bottomDividerHeight="1px"
-                android:visibility="gone"/>
+            <LinearLayout
+                android:id="@+id/tab_0"
+                android:layout_width="64dp"
+                android:layout_height="48dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
 
+                <ImageView
+                    android:id="@+id/tab_icon_0"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_shield"
+                    android:tint="@color/glass_text_secondary" />
+
+                <TextView
+                    android:id="@+id/tab_label_0"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="脱壳"
+                    android:textColor="@color/glass_text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/tab_1"
+                android:layout_width="64dp"
+                android:layout_height="48dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/tab_icon_1"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_hook"
+                    android:tint="@color/glass_text_secondary" />
+
+                <TextView
+                    android:id="@+id/tab_label_1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Hook"
+                    android:textColor="@color/glass_text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/tab_2"
+                android:layout_width="64dp"
+                android:layout_height="48dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/tab_icon_2"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_fix"
+                    android:tint="@color/glass_text_secondary" />
+
+                <TextView
+                    android:id="@+id/tab_label_2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="改包修复"
+                    android:textColor="@color/glass_text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/tab_3"
+                android:layout_width="64dp"
+                android:layout_height="48dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/tab_icon_3"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_setting"
+                    android:tint="@color/glass_text_secondary" />
+
+                <TextView
+                    android:id="@+id/tab_label_3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="设置"
+                    android:textColor="@color/glass_text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
-
-    </RelativeLayout>
-</com.qmuiteam.qmui.widget.QMUIWindowInsetLayout>
+    </FrameLayout>
+</FrameLayout>

@@ -36,6 +36,23 @@ public class ResultParser {
         return null;
     }
 
+    public static JSONObject parseRaw(String text) throws Exception {
+        String json = extractJson(text);
+        if (json == null){
+            throw new Exception("未在 AI 输出中找到 ```json 代码块");
+        }
+        JSONObject obj;
+        try {
+            obj = JSONObject.parseObject(json);
+        }catch (Throwable e){
+            throw new Exception("JSON 解析失败：" + e.getMessage());
+        }
+        if (obj == null){
+            throw new Exception("JSON 为空");
+        }
+        return obj;
+    }
+
     public static JSONObject parseAndNormalize(String text) throws Exception {
         String json = extractJson(text);
         if (json == null){

@@ -49,10 +49,18 @@ public class su {
     }
 
     public static void set777(){
+        final RxCmdShell.Session s = session;
+        if (s == null) {
+            return;
+        }
         new Thread(new Runnable(){
             @Override
             public void run(){
-               Cmd.builder("chmod -R 777 /data/mHook").execute(session);
+                try {
+                    Cmd.builder("chmod -R 777 /data/mHook").execute(s);
+                } catch (Throwable t) {
+                    Log.e("su", "set777 err: " + t.getMessage());
+                }
             }
         }).start();
     }

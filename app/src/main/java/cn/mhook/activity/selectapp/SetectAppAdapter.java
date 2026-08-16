@@ -47,9 +47,9 @@ public class SetectAppAdapter extends BaseQuickAdapter<SelectAppItem, BaseViewHo
                 .setText(R.id.item_ver,item.getVer())
                 .setText(R.id.item_pkg,item.getPkg());
         if (SelectActivity.ret.contains(item.getPkg())){
-            helper.setBackgroundColor(R.id.appInfoItem,getContext().getResources().getColor(R.color.app_color_blue));
+            helper.getView(R.id.appInfoItem).setBackgroundResource(R.drawable.bg_glass_card_selected);
         }else {
-            helper.setBackgroundColor(R.id.appInfoItem,getContext().getResources().getColor(R.color.white));
+            helper.getView(R.id.appInfoItem).setBackgroundResource(R.drawable.bg_glass_card);
         }
     }
 }

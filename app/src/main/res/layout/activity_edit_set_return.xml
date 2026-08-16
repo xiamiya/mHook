@@ -1,129 +1,207 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="cn.mhook.activity.editcfg.EditSetReturn">
+    android:background="@drawable/bg_home_gradient"
+    android:orientation="vertical">
 
-    <androidx.cardview.widget.CardView
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="12dp"
+        android:paddingRight="20dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="8dp">
+
+        <ImageView
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackgroundBorderless"
+            android:padding="8dp"
+            android:src="@drawable/ic_back"
+            android:tint="@color/glass_text_primary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:text="修改返回值"
+            android:textColor="@color/glass_text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_margin="20dp">
+        android:overScrollMode="never"
+        android:paddingLeft="20dp"
+        android:paddingRight="20dp"
+        android:paddingBottom="24dp">
 
-        <ScrollView
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_glass_card"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="类名"
+                        android:textColor="@color/glass_text_secondary"
+                        android:textSize="13sp" />
+
+                    <EditText
+                        android:id="@+id/className"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/bg_input_glass"
+                        android:hint="例：Lcom/abc/ab; com.abc.ab"
+                        android:padding="12dp"
+                        android:textColor="@color/glass_text_primary"
+                        android:textColorHint="@color/glass_text_tertiary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="方法名"
+                        android:textColor="@color/glass_text_secondary"
+                        android:textSize="13sp" />
+
+                    <EditText
+                        android:id="@+id/methodName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/bg_input_glass"
+                        android:hint="例：open isXXX"
+                        android:padding="12dp"
+                        android:textColor="@color/glass_text_primary"
+                        android:textColorHint="@color/glass_text_tertiary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="参数"
+                        android:textColor="@color/glass_text_secondary"
+                        android:textSize="13sp" />
+
+                    <EditText
+                        android:id="@+id/paramsName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/bg_input_glass"
+                        android:hint="例：(Lxx/xx;Lyy/yy;) xx.xx,yy.yy"
+                        android:padding="12dp"
+                        android:textColor="@color/glass_text_primary"
+                        android:textColorHint="@color/glass_text_tertiary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="返回值类型"
+                        android:textColor="@color/glass_text_secondary"
+                        android:textSize="13sp" />
+
+                    <EditText
+                        android:id="@+id/returnType"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/bg_input_glass"
+                        android:hint="例：Z I"
+                        android:padding="12dp"
+                        android:textColor="@color/glass_text_primary"
+                        android:textColorHint="@color/glass_text_tertiary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="返回值"
+                        android:textColor="@color/glass_text_secondary"
+                        android:textSize="13sp" />
+
+                    <EditText
+                        android:id="@+id/returnData"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/bg_input_glass"
+                        android:hint="例：true 1 或字符串"
+                        android:padding="12dp"
+                        android:textColor="@color/glass_text_primary"
+                        android:textColorHint="@color/glass_text_tertiary"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="10dp">
+                android:layout_marginTop="18dp"
+                android:gravity="center"
+                android:orientation="horizontal">
 
-                <com.rengwuxian.materialedittext.MaterialEditText
-                    android:id="@+id/className"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="类名"
-                    app:met_clearButton="true"
-                    app:met_floatingLabel="highlight"
-                    app:met_floatingLabelText="类名"
-                    app:met_helperText="例-Lcom/abc/ab; com.abc.ab" />
-
-                <com.rengwuxian.materialedittext.MaterialEditText
-                    android:id="@+id/methodName"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="方法名"
-                    app:met_clearButton="true"
-                    app:met_floatingLabel="highlight"
-                    app:met_floatingLabelText="方法名"
-                    app:met_helperText="例-open isXXX" />
-
-                <com.rengwuxian.materialedittext.MaterialEditText
-                    android:id="@+id/paramsName"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="参数"
-                    app:met_clearButton="true"
-                    app:met_floatingLabel="highlight"
-                    app:met_floatingLabelText="参数"
-                    app:met_helperText="例-(Lxx/xx;Lyy/yy;) xx.xx,yy.yy" />
-
-                <com.rengwuxian.materialedittext.MaterialEditText
-                    android:id="@+id/returnType"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="返回值类型"
-                    app:met_clearButton="true"
-                    app:met_floatingLabel="highlight"
-                    app:met_floatingLabelText="返回值类型"
-                    app:met_helperText="例-Z I " />
-
-                <com.rengwuxian.materialedittext.MaterialEditText
-                    android:id="@+id/returnData"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="返回值"
-                    app:met_clearButton="true"
-                    app:met_floatingLabel="highlight"
-                    app:met_floatingLabelText="返回值"
-                    app:met_helperText="例-true 1" />
-
-                <androidx.cardview.widget.CardView
+                <TextView
                     android:id="@+id/success"
-                    android:layout_width="match_parent"
-                    android:layout_height="40dp"
-                    android:layout_margin="60dp"
-                    app:cardBackgroundColor="@color/blue">
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_glass_btn"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="检查"
+                    android:textColor="@color/glass_accent_orange"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="检查"
-                            android:textColor="@color/white"
-                            android:textSize="16dp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-
-
-                <androidx.cardview.widget.CardView
+                <TextView
                     android:id="@+id/save"
-                    android:layout_width="match_parent"
-                    android:layout_height="40dp"
-                    android:layout_marginLeft="60dp"
-                    android:layout_marginRight="60dp"
-                    android:layout_marginTop="-40dp"
-                    app:cardBackgroundColor="@color/blue"
-                    android:visibility="gone">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="保存"
-                            android:textColor="@color/white"
-                            android:textSize="16dp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-
-
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_marginLeft="12dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_glass_btn"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="保存"
+                    android:textColor="@color/glass_accent_green"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
             </LinearLayout>
-        </ScrollView>
-
-    </androidx.cardview.widget.CardView>
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>

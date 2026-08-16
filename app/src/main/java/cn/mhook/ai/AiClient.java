@@ -27,6 +27,8 @@ public class AiClient {
     public interface Listener {
         void onDelta(String text);
 
+        void onReasoning(String text);
+
         void onToolCalls(JSONArray toolCalls);
 
         void onDone(String fullText);
@@ -120,6 +122,16 @@ public class AiClient {
                                         }
                                     });
                                 }
+                                String rc = message.getString("reasoning_content");
+                                if (rc != null && !rc.isEmpty()) {
+                                    final String seg = rc;
+                                    main.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            listener.onReasoning(seg);
+                                        }
+                                    });
+                                }
                                 JSONArray tcs = message.getJSONArray("tool_calls");
                                 if (tcs != null) {
                                     Log.i("AiClient", "stream message tool_calls=" + tcs.toJSONString());
@@ -141,6 +153,16 @@ public class AiClient {
                                         @Override
                                         public void run() {
                                             listener.onDelta(seg);
+                                        }
+                                    });
+                                }
+                                String rc = delta.getString("reasoning_content");
+                                if (rc != null && !rc.isEmpty()) {
+                                    final String seg = rc;
+                                    main.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            listener.onReasoning(seg);
                                         }
                                     });
                                 }

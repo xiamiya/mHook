@@ -19,6 +19,8 @@ public class AiSession {
     public interface Listener {
         void onDelta(String text);
 
+        void onReasoning(String text);
+
         void onToolEvent(String text);
 
         void onDone(String finalText);
@@ -97,10 +99,34 @@ public class AiSession {
             });
             return;
         }
+        final long watchdogMs = Math.max(45_000, AiSetting.timeout(ctx));
+        final Runnable[] watchdog = new Runnable[1];
+        watchdog[0] = new Runnable() {
+            @Override
+            public void run() {
+                if (stopFlag) {
+                    return;
+                }
+                stopFlag = true;
+                final String tip = "\n\n[AI 无响应] 本轮在 " + (watchdogMs / 1000)
+                        + " 秒内没有任何输出，已自动终止会话。若目标分析确实复杂，请再次发起分析（可调大 AI 设置中的超时）。\n\n";
+                listener.onToolEvent(tip);
+                listener.onDone("");
+            }
+        };
         AiClient.complete(ctx, messages, tools, new AiClient.Listener() {
             @Override
             public void onDelta(String text) {
+                main.removeCallbacks(watchdog[0]);
+                main.postDelayed(watchdog[0], watchdogMs);
                 listener.onDelta(text);
+            }
+
+            @Override
+            public void onReasoning(String text) {
+                main.removeCallbacks(watchdog[0]);
+                main.postDelayed(watchdog[0], watchdogMs);
+                listener.onReasoning(text);
             }
 
             @Override
@@ -108,6 +134,7 @@ public class AiSession {
                 if (stopFlag) {
                     return;
                 }
+                main.removeCallbacks(watchdog[0]);
                 final int next = step + 1;
                 new Thread(new Runnable() {
                     @Override
@@ -119,6 +146,9 @@ public class AiSession {
                             assistant.put("tool_calls", toolCalls);
                             messages.add(assistant);
                             for (Object o : toolCalls) {
+                                if (stopFlag) {
+                                    break;
+                                }
                                 JSONObject tc = (JSONObject) o;
                                 JSONObject fn = tc.getJSONObject("function");
                                 final String name = fn == null ? "" : fn.getString("name");
@@ -144,7 +174,7 @@ public class AiSession {
                                     }
                                 } catch (Throwable ignored) {
                                 }
-                                String result = executeTool(ctx, name, args);
+                                String result = executeTool(ctx, name, args, main, listener);
                                 String callId = tc.getString("id");
                                 if (callId == null || callId.isEmpty()) {
                                     callId = "call_" + System.nanoTime();
@@ -185,17 +215,23 @@ public class AiSession {
 
             @Override
             public void onDone(String fullText) {
+                main.removeCallbacks(watchdog[0]);
+                if (fullText == null || fullText.trim().isEmpty()) {
+                    listener.onToolEvent("\n\n[AI 空响应] 本轮请求返回 HTTP 200 但未包含任何内容（可能是上下文过长或模型输出被截断）。建议：缩短需求描述，或在 AI 设置中调大 max_tokens，然后重新分析。\n\n");
+                }
                 listener.onDone(fullText);
             }
 
             @Override
             public void onError(Throwable t) {
+                main.removeCallbacks(watchdog[0]);
                 listener.onError(t);
             }
         });
     }
 
-    private static String executeTool(Context ctx, String name, JSONObject args) {
+    private static String executeTool(Context ctx, String name, JSONObject args,
+                                      final Handler main, final Listener listener) {
         try {
             if (name == null || name.trim().isEmpty()) {
                 return "[工具调用异常] function.name 为空：工具名必须填在 function.name 字段（可用工具: " + join(availableTools)
@@ -213,12 +249,56 @@ public class AiSession {
                 return McpManager.truncate(content, McpManager.MAX_TOOL_OUTPUT);
             }
             if (name.startsWith("mcp__")) {
-                return McpManager.truncate(McpManager.callTool(ctx, name, args), McpManager.MAX_TOOL_OUTPUT);
+                try {
+                    return McpManager.truncate(McpManager.callTool(ctx, name, args), McpManager.MAX_TOOL_OUTPUT);
+                } catch (Throwable t) {
+                    if (isConnectionFailure(t)) {
+                        final String server = serverOf(name);
+                        stopFlag = true;
+                        final String tip = "\n\n[MCP 连接断开] " + server
+                                + " 的 MCP 服务连接已断开（" + shortMsg(t)
+                                + "），本次会话已终止。请到 MT 管理器侧边栏重新开启 APK MCP 并保持后台运行后再试。\n\n";
+                        main.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                listener.onToolEvent(tip);
+                            }
+                        });
+                        return tip;
+                    }
+                    return "[工具执行异常] " + name + ": " + shortMsg(t);
+                }
             }
             return "[未知工具: " + name + "] 可用工具: " + join(availableTools);
         } catch (Throwable t) {
-            return "[工具执行异常] " + name + ": " + (t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage());
+            return "[工具执行异常] " + name + ": " + shortMsg(t);
         }
+    }
+
+    private static String serverOf(String fullName) {
+        String[] parts = fullName == null ? null : fullName.split("__", 3);
+        if (parts != null && parts.length == 3 && !parts[1].isEmpty()) {
+            return parts[1];
+        }
+        return "MCP";
+    }
+
+    private static String shortMsg(Throwable t) {
+        String m = t.getMessage();
+        if (m != null && m.length() > 80) {
+            m = m.substring(0, 80);
+        }
+        return m == null || m.isEmpty() ? t.getClass().getSimpleName() : m;
+    }
+
+    private static boolean isConnectionFailure(Throwable t) {
+        if (t instanceof java.net.SocketTimeoutException) return true;
+        if (t instanceof java.net.ConnectException) return true;
+        if (t instanceof java.net.SocketException) return true;
+        if (t instanceof java.io.EOFException) return true;
+        String msg = t.getMessage() == null ? "" : t.getMessage();
+        return msg.contains("空响应") || msg.contains("timed out") || msg.contains("refused")
+                || msg.contains("reset") || msg.contains("Connection closed") || msg.contains("end of stream");
     }
 
     private static void addUseSkill(Context ctx, JSONArray tools) {

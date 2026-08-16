@@ -1,50 +1,224 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="340dp"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    android:background="@drawable/bg_float_glass">
 
-    <RelativeLayout
-        android:id="@+id/bar"
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:layout_alignParentBottom="true"
-        android:padding="5dp">
-
-        <androidx.cardview.widget.CardView
-            android:id="@+id/reduce"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            app:cardCornerRadius="20dp"
-            app:cardBackgroundColor="@color/app_color_theme_9"
-            android:layout_centerHorizontal="true"
-            android:layout_centerVertical="true">
-
-            <ImageView
-                android:id="@+id/imageView3"
-                android:layout_width="15dp"
-                android:layout_height="15dp"
-                android:src="@drawable/min"
-                android:layout_gravity="center"/>
-        </androidx.cardview.widget.CardView>
-
-    </RelativeLayout>
-
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/contentViewPager"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@+id/tabSegment"
-        android:layout_above="@+id/bar"
-        android:background="@color/qmui_config_color_pure_black"/>
-    <com.qmuiteam.qmui.widget.tab.QMUITabSegment2
-        android:id="@+id/tabSegment"
-        android:layout_width="match_parent"
+        android:orientation="vertical">
+
+        <!-- 拖动条 -->
+        <LinearLayout
+            android:id="@+id/bar"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingLeft="14dp"
+            android:paddingRight="10dp">
+
+            <View
+                android:layout_width="18dp"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_grip_dots" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_weight="1"
+                android:text="调试浮窗"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/reduce"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:background="@drawable/bg_glass_pill"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:text="收起"
+                android:textColor="#D9FFFFFF"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Tab -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingLeft="14dp"
+            android:paddingRight="14dp">
+
+            <TextView
+                android:id="@+id/tab_debug"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:background="@drawable/bg_glass_pill"
+                android:gravity="center"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:text="调试"
+                android:textColor="@color/glass_accent_orange"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tab_other"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:layout_marginLeft="8dp"
+                android:background="@drawable/bg_glass_pill"
+                android:gravity="center"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:text="其他"
+                android:textColor="#80FFFFFF"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- 调试面板 -->
+        <LinearLayout
+            android:id="@+id/log_panel"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/config_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:layout_weight="1" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp">
+
+                <TextView
+                    android:id="@+id/cleanAll"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_marginRight="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_glass_pill"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="清空"
+                    android:textColor="#D9FFFFFF"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/sx"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_marginLeft="4dp"
+                    android:layout_marginRight="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_glass_pill"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="筛选"
+                    android:textColor="#D9FFFFFF"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/stop"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_marginLeft="4dp"
+                    android:layout_marginRight="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_glass_pill"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="暂停"
+                    android:textColor="#D9FFFFFF"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/dc"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_marginLeft="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_glass_pill"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="导出"
+                    android:textColor="#D9FFFFFF"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 其他面板 -->
+        <LinearLayout
+            android:id="@+id/setting_panel"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/closeFloat"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:background="@drawable/bg_glass_pill"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="关闭悬浮窗"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#80FFFFFF"
+                    android:textSize="18sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/resizeHandle"
+        android:layout_width="30dp"
         android:layout_height="30dp"
-        app:qmui_bottomDividerHeight="0px"
-        android:background="@color/qmui_config_color_pure_black">
-    </com.qmuiteam.qmui.widget.tab.QMUITabSegment2>
-
-
-
-</RelativeLayout>
+        android:layout_gravity="bottom|right"
+        android:layout_marginRight="2dp"
+        android:layout_marginBottom="2dp"
+        android:padding="6dp"
+        android:src="@drawable/bg_resize_grip" />
+</FrameLayout>

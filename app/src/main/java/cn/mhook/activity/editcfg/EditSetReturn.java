@@ -1,52 +1,55 @@
 package cn.mhook.activity.editcfg;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
+import android.app.Activity;
+import android.widget.EditText;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.rengwuxian.materialedittext.MaterialEditText;
-import com.tamsiree.rxkit.view.RxToast;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import cn.mhook.BaseActivity;
 import cn.mhook.mhook.R;
+import cn.mhook.widget.GlassToast;
 
-public class EditSetReturn extends BaseActivity {
+public class EditSetReturn extends Activity {
 
-    MaterialEditText className,methodName,paramsName,returnType,returnData;
-    String classNames,methodNames,paramsNames,returnTypes,returnDatas;
-    CardView success,save;
+    EditText className, methodName, paramsName, returnType, returnData;
+    String classNames, methodNames, paramsNames, returnTypes, returnDatas;
+    View success, save;
     JSONObject hookJson;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_set_return);
+        findViewById(R.id.btn_back).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
         Bundle b = getIntent().getExtras();
-        if (b!=null&&b.containsKey("data")){
+        if (b != null && b.containsKey("data")) {
             hookJson = JSONObject.parseObject(b.getString("data"));
-
         }
         initView();
-        if (hookJson==null){
+        if (hookJson == null) {
             hookJson = new JSONObject(true);
         }
     }
 
-    private void initView(){
+    private void initView() {
         success = findViewById(R.id.success);
         save = findViewById(R.id.save);
         View.OnFocusChangeListener onFocusChangeListener = new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
-                if (hasFocus){
+                if (hasFocus) {
                     save.setVisibility(View.GONE);
                 }
             }
@@ -62,10 +65,10 @@ public class EditSetReturn extends BaseActivity {
         returnData = findViewById(R.id.returnData);
         returnData.setOnFocusChangeListener(onFocusChangeListener);
 
-        if (hookJson!=null){
+        if (hookJson != null) {
             className.setText(hookJson.getString("className"));
             methodName.setText(hookJson.getString("methodName"));
-            paramsName.setText(hookJson.getJSONArray("paramsName")==null?"":hookJson.getJSONArray("paramsName").toJSONString());
+            paramsName.setText(hookJson.getJSONArray("paramsName") == null ? "" : hookJson.getJSONArray("paramsName").toJSONString());
             returnType.setText(hookJson.getString("returnType"));
             returnData.setText(hookJson.getString("returnData"));
         }
@@ -115,7 +118,7 @@ public class EditSetReturn extends BaseActivity {
             if (!methodNames.isEmpty()&&paramsNames.isEmpty()&&returnTypes.isEmpty()){
                 goneFun(methodNames);
             }else {
-                RxToast.warning("填写不完整");
+                GlassToast.warning(this, "填写不完整");
                 return;
             }
         }
@@ -129,7 +132,7 @@ public class EditSetReturn extends BaseActivity {
         if (!returnDatas.isEmpty()){
             save.setVisibility(View.VISIBLE);
         }else {
-            RxToast.success("格式化成功");
+            GlassToast.success(this, "格式化成功");
         }
     }
 

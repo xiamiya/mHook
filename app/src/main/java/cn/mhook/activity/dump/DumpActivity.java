@@ -1,5 +1,7 @@
 package cn.mhook.activity.dump;
 
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -15,31 +17,24 @@ import com.arlib.floatingsearchview.FloatingSearchView;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.listener.OnItemChildClickListener;
 import com.chad.library.adapter.base.listener.OnItemChildLongClickListener;
-import com.nightonke.boommenu.BoomButtons.HamButton;
-import com.nightonke.boommenu.BoomButtons.OnBMClickListener;
-import com.nightonke.boommenu.BoomMenuButton;
-import com.qmuiteam.qmui.skin.QMUISkinManager;
-import com.qmuiteam.qmui.widget.dialog.QMUIDialog;
-import com.qmuiteam.qmui.widget.dialog.QMUIDialogAction;
 import com.tamsiree.rxkit.RxActivityTool;
 import com.tamsiree.rxkit.RxAppTool;
 import com.tamsiree.rxkit.RxFileTool;
-import com.tamsiree.rxkit.view.RxToast;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import cn.mhook.BaseActivity;
 import cn.mhook.activity.selectapp.SelectActivity;
 import cn.mhook.activity.selectapp.SelectAppItem;
 import cn.mhook.mhook.R;
+import cn.mhook.widget.GlassToast;
 
 import static cn.mhook.mData.mDir;
 import static cn.mhook.msu.su.exec;
 import static cn.mhook.msu.su.set777;
 
-public class DumpActivity extends BaseActivity {
+public class DumpActivity extends Activity {
 
     private RecyclerView recyclerView;
     private SwipeRefreshLayout refreshLayout;
@@ -51,15 +46,32 @@ public class DumpActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_app_xw);
+        setContentView(R.layout.activity_dump);
         handler = new Handler();
+        findViewById(R.id.btn_back).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
         initListView();
-        initBoomMenu();
+        initAddBtn();
     }
 
-    private void initListView(){
-        recyclerView = (RecyclerView) findViewById(R.id.config_recycler_view);
-        refreshLayout=(SwipeRefreshLayout)findViewById(R.id.refresh_layout);
+    private void initAddBtn() {
+        findViewById(R.id.btn_add).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Bundle bundle = new Bundle();
+                bundle.putString("appType", "all");
+                RxActivityTool.skipActivityForResult(DumpActivity.this, SelectActivity.class, bundle, 9008);
+            }
+        });
+    }
+
+    private void initListView() {
+        recyclerView = findViewById(R.id.config_recycler_view);
+        refreshLayout = findViewById(R.id.refresh_layout);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         layoutManager.setOrientation(RecyclerView.VERTICAL);
         recyclerView.setLayoutManager(layoutManager);
@@ -85,22 +97,19 @@ public class DumpActivity extends BaseActivity {
                     return;
                 }
                 final boolean on = isDumpOn(pkg);
-                new QMUIDialog.MessageDialogBuilder(DumpActivity.this)
+                new AlertDialog.Builder(DumpActivity.this)
                         .setTitle(on ? "关闭脱壳" : "开启脱壳")
                         .setMessage(on ? "关闭后将删除该应用的 dump 开关目录（已脱壳的 dex 也会被移除）"
                                 : "开启后重启目标应用即自动脱壳。\n\ndex 文件保存位置：\n/data/mHook/" + pkg + "/dump/")
-                        .setSkinManager(QMUISkinManager.defaultInstance(DumpActivity.this))
-                        .addAction("取消", new QMUIDialogAction.ActionListener() {
+                        .setNegativeButton("取消", null)
+                        .setPositiveButton(on ? "关闭" : "开启", new android.content.DialogInterface.OnClickListener() {
                             @Override
-                            public void onClick(QMUIDialog dialog, int index) {
-                                dialog.dismiss();
-                            }
-                        })
-                        .addAction(0, on ? "关闭" : "开启", QMUIDialogAction.ACTION_PROP_NEGATIVE, new QMUIDialogAction.ActionListener() {
-                            @Override
-                            public void onClick(QMUIDialog dialog, int index) {
-                                setDump(pkg, !on);
-                                RxToast.success(on ? "已关闭脱壳" : "已开启脱壳，dex 保存到 /data/mHook/" + pkg + "/dump/，重启目标应用后生效");
+                            public void onClick(android.content.DialogInterface dialog, int which) {
+                                if (setDump(pkg, !on)) {
+                                    GlassToast.success(DumpActivity.this, on ? "已关闭脱壳" : "已开启脱壳，dex 保存到 /data/mHook/" + pkg + "/dump/，重启目标应用后生效");
+                                } else {
+                                    GlassToast.warning(DumpActivity.this, "开启失败：内存脱壳需要 root 权限写入 /data/mHook，当前设备似乎未授予 root");
+                                }
                                 initList("");
                                 dialog.dismiss();
                             }
@@ -112,19 +121,13 @@ public class DumpActivity extends BaseActivity {
             @Override
             public boolean onItemChildLongClick(@NonNull BaseQuickAdapter adapter, @NonNull View view, int position) {
                 final String pkg = datas.get(position).getPkg();
-                new QMUIDialog.MessageDialogBuilder(DumpActivity.this)
+                new AlertDialog.Builder(DumpActivity.this)
                         .setTitle("提示")
                         .setMessage("确定要移除该应用吗？")
-                        .setSkinManager(QMUISkinManager.defaultInstance(DumpActivity.this))
-                        .addAction("取消", new QMUIDialogAction.ActionListener() {
+                        .setNegativeButton("取消", null)
+                        .setPositiveButton("确定", new android.content.DialogInterface.OnClickListener() {
                             @Override
-                            public void onClick(QMUIDialog dialog, int index) {
-                                dialog.dismiss();
-                            }
-                        })
-                        .addAction(0, "确定", QMUIDialogAction.ACTION_PROP_NEGATIVE, new QMUIDialogAction.ActionListener() {
-                            @Override
-                            public void onClick(QMUIDialog dialog, int index) {
+                            public void onClick(android.content.DialogInterface dialog, int which) {
                                 RxFileTool.deleteDir(mDir + pkg + "/dump/");
                                 initList("");
                                 dialog.dismiss();
@@ -144,51 +147,37 @@ public class DumpActivity extends BaseActivity {
         });
     }
 
-
-    private void initBoomMenu(){
-        BoomMenuButton bmb = findViewById(R.id.bmb);
-        bmb.addBuilder(new HamButton.Builder()
-                .normalImageRes(R.drawable.eagle)
-                .normalText("添加软件")
-                .listener(new OnBMClickListener() {
-                    @Override
-                    public void onBoomButtonClick(int index) {
-                        Bundle bundle=new Bundle();
-                        bundle.putString("appType","all");
-                        RxActivityTool.skipActivityForResult(DumpActivity.this, SelectActivity.class,bundle,9008);
-                    }
-                })
-                .subNormalText("添加需要脱壳的软件"));
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode==9008&&resultCode==RESULT_OK){
+        if (requestCode == 9008 && resultCode == RESULT_OK) {
             String pkg = data.getStringExtra("pkg");
-            setDump(pkg,true);
-            RxToast.success("已开启脱壳，重启目标应用后生效");
+            if (setDump(pkg, true)) {
+                GlassToast.success(this, "已开启脱壳，重启目标应用后生效");
+            } else {
+                GlassToast.warning(this, "添加失败：内存脱壳需要 root 权限写入 /data/mHook，当前设备似乎未授予 root");
+            }
             initList("");
         }
     }
 
-    private static boolean isDumpOn(String pkg){
+    private static boolean isDumpOn(String pkg) {
         return new File(mDir + pkg + "/dump").exists();
     }
 
     /** 立即脱壳：向目标进程写 dump_now 触发文件，其脱壳线程会执行一次枚举。 */
-    private void dumpNow(String pkg){
+    private void dumpNow(String pkg) {
         if (!isAppRunning(pkg)) {
-            RxToast.warning("目标应用未运行，请先启动 " + pkg);
+            GlassToast.warning(this, "目标应用未运行，请先启动 " + pkg);
             return;
         }
         if (!isDumpOn(pkg)) {
-            RxToast.warning("请先开启该应用的脱壳");
+            GlassToast.warning(this, "请先开启该应用的脱壳");
             return;
         }
         exec("mkdir -p '" + mDir + pkg + "' && chmod 777 '" + mDir + pkg
                 + "' && echo 1 > '" + mDir + pkg + "/dump_now'");
-        RxToast.success("已触发立即脱壳，稍候自动刷新");
+        GlassToast.success(this, "已触发立即脱壳，稍候自动刷新");
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -205,36 +194,38 @@ public class DumpActivity extends BaseActivity {
         return false;
     }
 
-    private static void setDump(String pkg, boolean on){
+    private static boolean setDump(String pkg, boolean on) {
         String dir = mDir + pkg + "/dump";
-        if (on){
+        if (on) {
             // 用 su 同步创建并设 777，确保目标应用进程能写入脱壳 dex
             exec("mkdir -p '" + dir + "' && chmod 777 '" + dir + "'");
             new File(dir).mkdirs();
-        }else {
+        } else {
             RxFileTool.deleteDir(dir);
         }
         try {
             set777();
-        }catch (Throwable ignored) {
+        } catch (Throwable ignored) {
         }
+        // 免root 设备无法写入 /data/mHook，目录创建失败时返回 false 以便提示
+        return new File(dir).exists();
     }
 
-    private  void initList(final String query){
-        new Thread(new Runnable(){
+    private void initList(final String query) {
+        new Thread(new Runnable() {
             @Override
-            public void run(){
-                if (datas.size()>0){
+            public void run() {
+                if (datas.size() > 0) {
                     datas.clear();
                 }
-                java.util.List<File> fileList = RxFileTool.listFilesInDir(mDir,false);
+                java.util.List<File> fileList = RxFileTool.listFilesInDir(mDir, false);
                 if (fileList != null) {
                     for (File file : fileList) {
                         String filePath = file.getPath();
-                        if (RxFileTool.fileExists(filePath+"/dump")){
+                        if (RxFileTool.fileExists(filePath + "/dump")) {
                             String pkg = file.getName();
-                            if (pkg.contains(query)|| RxAppTool.getAppName(DumpActivity.this,pkg).contains(query)){
-                                datas.add(new SelectAppItem(pkg,RxAppTool.getAppVersionName(DumpActivity.this,pkg),RxAppTool.getAppName(DumpActivity.this,pkg),false));
+                            if (pkg.contains(query) || RxAppTool.getAppName(DumpActivity.this, pkg).contains(query)) {
+                                datas.add(new SelectAppItem(pkg, RxAppTool.getAppVersionName(DumpActivity.this, pkg), RxAppTool.getAppName(DumpActivity.this, pkg), false));
                             }
                         }
                     }

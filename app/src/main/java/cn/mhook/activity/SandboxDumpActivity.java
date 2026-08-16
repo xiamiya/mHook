@@ -1,5 +1,6 @@
 package cn.mhook.activity;
 
+import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.net.Uri;
@@ -10,6 +11,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
 import android.view.View;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.io.BufferedOutputStream;
@@ -24,7 +26,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import cn.mhook.BaseActivity;
+
 import cn.mhook.mhook.R;
 import top.niunaijun.blackbox.BlackBoxCore;
 import top.niunaijun.blackbox.entity.AppConfig;
@@ -33,7 +35,7 @@ import top.niunaijun.blackbox.entity.pm.InstallResult;
 /**
  * 免root脱壳：选择 APK → 自动装入沙箱运行 → 虚拟进程内自动 dump dex → 自动返回界面并导出 zip 到 Download。
  */
-public class SandboxDumpActivity extends BaseActivity {
+public class SandboxDumpActivity extends Activity {
 
     private static final int REQ_APK = 1001;
 
@@ -41,7 +43,6 @@ public class SandboxDumpActivity extends BaseActivity {
     private static volatile String sDoneLog;
 
     private TextView btnChoose;
-    private TextView statusView;
     private TextView logView;
     private TextView cleanBtn;
     private StringBuilder logBuffer = new StringBuilder();
@@ -54,10 +55,22 @@ public class SandboxDumpActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sandbox_dump);
+        findViewById(R.id.btn_back).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
         btnChoose = findViewById(R.id.sb_btn_choose);
         cleanBtn = findViewById(R.id.sb_btn_clean);
-        statusView = findViewById(R.id.sb_status);
         logView = findViewById(R.id.sb_log);
+        findViewById(R.id.sb_clear).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                logBuffer.setLength(0);
+                logView.setText("");
+            }
+        });
         // 自动返回重新创建的实例：直接展示上次脱壳结果
         if (sDoneStatus != null) {
             setStatus(sDoneStatus);
@@ -250,7 +263,7 @@ public class SandboxDumpActivity extends BaseActivity {
     private void pollDump(final String pkg) {
         final File outDir = new File(getFilesDir(), "sandbox_dump" + File.separator + pkg);
         final long start = System.currentTimeMillis();
-        final long timeout = 60 * 1000L;
+        final long timeout = 90 * 1000L;
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -293,7 +306,8 @@ public class SandboxDumpActivity extends BaseActivity {
                             }
                         }
                         long now = System.currentTimeMillis();
-                        if (lastCount > 0 && now - stableSince > 12 * 1000L) {
+                        // 等待更长：至少 25s（覆盖 15s/25s 延迟加载轮次）+ 15s 无新 dex 才判定完成
+                        if (lastCount > 0 && now - start > 25 * 1000L && now - stableSince > 15 * 1000L) {
                             final int c = lastCount;
                             handler.post(new Runnable() {
                                 @Override
@@ -433,7 +447,8 @@ public class SandboxDumpActivity extends BaseActivity {
                     ContentValues values = new ContentValues();
                     values.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
                     values.put(MediaStore.MediaColumns.MIME_TYPE, "application/zip");
-                    values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+                    values.put(MediaStore.MediaColumns.RELATIVE_PATH,
+                            Environment.DIRECTORY_DOWNLOADS + "/mhook_dump");
                     savedUri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
                     if (savedUri != null) os = getContentResolver().openOutputStream(savedUri);
                 } catch (Throwable t) {
@@ -442,7 +457,8 @@ public class SandboxDumpActivity extends BaseActivity {
                 }
             }
             if (os == null) {
-                File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                File dir = new File(Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_DOWNLOADS), "mhook_dump");
                 if (!dir.exists()) dir.mkdirs();
                 os = new FileOutputStream(new File(dir, name));
             }
@@ -451,7 +467,6 @@ public class SandboxDumpActivity extends BaseActivity {
                 byte[] buf = new byte[8192];
                 for (File f : dexes) {
                     ZipEntry entry = new ZipEntry(f.getName());
-                    entry.setSize(f.length());
                     zos.putNextEntry(entry);
                     FileInputStream in = new FileInputStream(f);
                     try {
@@ -469,10 +484,12 @@ public class SandboxDumpActivity extends BaseActivity {
                 }
             }
             if (savedUri != null) {
-                return "Download/" + name;
+                return "Download/mhook_dump/" + name;
             }
-            return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + "/" + name;
+            return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    "mhook_dump").getAbsolutePath() + "/" + name;
         } catch (Throwable t) {
+            android.util.Log.e("SandboxDump", "exportZip err", t);
             return null;
         }
     }
@@ -488,7 +505,6 @@ public class SandboxDumpActivity extends BaseActivity {
     }
 
     private void setStatus(final String s) {
-        statusView.setText(s);
     }
 
     /** 追加一行带时间戳的步骤日志，最多保留 50 行。 */
@@ -507,6 +523,15 @@ public class SandboxDumpActivity extends BaseActivity {
             logBuffer.append(sb);
         }
         logView.setText(logBuffer.toString());
+        final ScrollView sv = (ScrollView) findViewById(R.id.sb_log_scroll);
+        if (sv != null) {
+            sv.post(new Runnable() {
+                @Override
+                public void run() {
+                    sv.fullScroll(ScrollView.FOCUS_DOWN);
+                }
+            });
+        }
     }
 
     private void reset() {

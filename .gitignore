@@ -8,8 +8,12 @@
 .externalNativeBuild
 .cxx
 /app/release/
+/build
+/app/build
 *.jks
 *.keystore
 *.key
 *.p12
 *.pfx
+!app/src/main/assets/npatch/npatch.key
+!app/src/main/assets/npatch/fpa_app.key

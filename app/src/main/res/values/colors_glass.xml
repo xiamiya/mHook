@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 玻璃拟态暖色 UI 色板（对应主页.html） -->
+    <color name="glass_bg_top">#FAF6EE</color>
+    <color name="glass_bg_mid">#F5EFE3</color>
+    <color name="glass_bg_bottom">#F0E9DB</color>
+
+    <color name="glass_card_bg">#85FFFFFF</color>
+    <color name="glass_card_bg_hover">#ADFFFFFF</color>
+    <color name="glass_card_border">#A6FFFFFF</color>
+    <color name="glass_card_border_hover">#D9FFFFFF</color>
+
+    <color name="glass_text_primary">#2D2A26</color>
+    <color name="glass_text_secondary">#8C8279</color>
+    <color name="glass_text_tertiary">#B5A99C</color>
+
+    <color name="glass_accent_green">#16A34A</color>
+    <color name="glass_accent_blue">#2563EB</color>
+    <color name="glass_accent_orange">#EA580C</color>
+    <color name="glass_accent_pink">#DB2777</color>
+    <color name="glass_accent_violet">#7C3AED</color>
+    <color name="glass_accent_cyan">#0891B2</color>
+    <color name="glass_accent_indigo">#4F46E5</color>
+    <color name="glass_accent_slate">#475569</color>
+    <color name="glass_accent_red">#DC2626</color>
+    <color name="glass_accent_purple">#7C3AED</color>
+
+    <color name="glass_badge_green_bg">#1A16A34A</color>
+    <color name="glass_badge_blue_bg">#1A2563EB</color>
+    <color name="glass_badge_orange_bg">#1AEA580C</color>
+    <color name="glass_badge_pink_bg">#1ADB2777</color>
+</resources>

@@ -1,6 +1,7 @@
 package cn.mhook.activity.xp;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -17,7 +18,6 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.tamsiree.rxkit.RxEncryptTool;
 import com.tamsiree.rxkit.RxTimeTool;
-import com.tamsiree.rxkit.view.RxToast;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,7 +28,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-import cn.mhook.BaseActivity;
 import cn.mhook.ai.AiPrompt;
 import cn.mhook.ai.AiSession;
 import cn.mhook.ai.AiSetting;
@@ -36,12 +35,13 @@ import cn.mhook.ai.ResultParser;
 import cn.mhook.analyze.XpExtract;
 import cn.mhook.mhook.R;
 import cn.mhook.mhook.contentprovider.jsonCfg;
+import cn.mhook.widget.GlassToast;
 
 /**
- * XP模块分析AI版：独立入口。dexlib2 提取 hook 点 → 调用 mHook 原有 AI 模块，
+ * XP模块分析AI版：独立入口。dexlib2 提取 hook 点，调用 mHook 原有 AI 模块。
  * 在输出区实时展示分析过程（提取统计 / AI 流式输出 / 工具调用 / 解析结果）。
  */
-public class XpModuleAiActivity extends BaseActivity {
+public class XpModuleAiActivity extends Activity {
 
     private static final int REQ_PICK_APK = 9012;
 
@@ -69,9 +69,18 @@ public class XpModuleAiActivity extends BaseActivity {
         outputView = findViewById(R.id.xpai_output);
         scrollView = findViewById(R.id.xpai_scroll);
 
-        findViewById(R.id.xpai_select_btn).setBackgroundColor(getResources().getColor(R.color.app_color_theme_7));
-        findViewById(R.id.xpai_run_btn).setBackgroundColor(getResources().getColor(R.color.blue));
-        findViewById(R.id.xpai_import_btn).setBackgroundColor(getResources().getColor(R.color.green));
+        findViewById(R.id.btn_back).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
+        findViewById(R.id.xpai_clear).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                outputView.setText("分析过程将在这里实时显示");
+            }
+        });
 
         findViewById(R.id.xpai_select_btn).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -110,7 +119,7 @@ public class XpModuleAiActivity extends BaseActivity {
             try {
                 startActivityForResult(intent, REQ_PICK_APK);
             } catch (Throwable t2) {
-                RxToast.error("无法打开文件选择器");
+                GlassToast.error(XpModuleAiActivity.this, "无法打开文件选择器");
             }
         }
     }
@@ -152,7 +161,7 @@ public class XpModuleAiActivity extends BaseActivity {
                         public void run() {
                             appendLog("✗ 复制失败：" + t.getMessage());
                             setStatus("复制失败: " + t.getMessage());
-                            RxToast.error("复制失败: " + t.getMessage());
+                            GlassToast.error(XpModuleAiActivity.this, "复制失败: " + t.getMessage());
                         }
                     });
                 }
@@ -190,15 +199,15 @@ public class XpModuleAiActivity extends BaseActivity {
 
     private void startAiAnalyze() {
         if (running || extracting) {
-            RxToast.info("正在处理中…");
+            GlassToast.info(XpModuleAiActivity.this, "正在处理中…");
             return;
         }
         if (apkFile == null || !apkFile.exists()) {
-            RxToast.warning("请先选择 APK");
+            GlassToast.warning(XpModuleAiActivity.this, "请先选择 APK");
             return;
         }
         if (AiSetting.baseUrl(this).isEmpty() || AiSetting.apiKey(this).isEmpty() || AiSetting.model(this).isEmpty()) {
-            RxToast.warning("请先完成 AI 设置");
+            GlassToast.warning(XpModuleAiActivity.this, "请先完成 AI 设置");
             openAiSettings();
             return;
         }
@@ -228,7 +237,7 @@ public class XpModuleAiActivity extends BaseActivity {
                             extracting = false;
                             appendLog("✗ 提取失败：" + t.getMessage());
                             setStatus("提取失败: " + t.getMessage());
-                            RxToast.error("提取失败: " + t.getMessage());
+                            GlassToast.error(XpModuleAiActivity.this, "提取失败: " + t.getMessage());
                         }
                     });
                     return;
@@ -267,7 +276,7 @@ public class XpModuleAiActivity extends BaseActivity {
                             running = false;
                             appendLog("✗ 提取失败：" + t.getMessage());
                             setStatus("提取失败: " + t.getMessage());
-                            RxToast.error("提取失败: " + t.getMessage());
+                            GlassToast.error(XpModuleAiActivity.this, "提取失败: " + t.getMessage());
                         }
                     });
                     return;
@@ -311,10 +320,10 @@ public class XpModuleAiActivity extends BaseActivity {
         scrollBottom();
         if (XpExtract.heavyObfuscation) {
             setStatus("提取完成（含高强度混淆提示），可「开始AI分析」尝试，或直接放弃");
-            RxToast.warning("检测到高强度混淆，hook 目标可能无法静态还原");
+            GlassToast.warning(XpModuleAiActivity.this, "检测到高强度混淆，hook 目标可能无法静态还原");
         } else {
             setStatus("提取完成，可点击「开始AI分析」生成配置");
-            RxToast.success("提取完成：" + hooks + " 个 hook 点");
+            GlassToast.success(XpModuleAiActivity.this, "提取完成：" + hooks + " 个 hook 点");
         }
     }
 
@@ -332,6 +341,12 @@ public class XpModuleAiActivity extends BaseActivity {
             }
 
             @Override
+            public void onReasoning(String text) {
+                outputView.append(text);
+                scrollBottom();
+            }
+
+            @Override
             public void onToolEvent(String text) {
                 appendLog("\n— 工具调用：\n" + text);
             }
@@ -342,7 +357,7 @@ public class XpModuleAiActivity extends BaseActivity {
                 if (fullText == null || fullText.trim().isEmpty()) {
                     appendLog("✗ AI 未返回内容（可能已停止或超限）");
                     setStatus("AI 未返回内容");
-                    RxToast.warning("AI 未返回内容");
+                    GlassToast.warning(XpModuleAiActivity.this, "AI 未返回内容");
                     return;
                 }
                 appendLog("\n[步骤 2/2] 解析 AI 结果…");
@@ -362,11 +377,11 @@ public class XpModuleAiActivity extends BaseActivity {
                     appendLog(sb.toString());
                     findViewById(R.id.xpai_import_btn).setEnabled(true);
                     setStatus("解析成功，可点击「导入」。");
-                    RxToast.success("解析成功：" + apps + " 个应用 / " + hooks + " 条 hook");
+                    GlassToast.success(XpModuleAiActivity.this, "解析成功：" + apps + " 个应用 / " + hooks + " 条 hook");
                 } catch (Exception e) {
                     appendLog("✗ 解析失败：" + e.getMessage());
                     setStatus("解析失败：" + e.getMessage());
-                    RxToast.error("解析失败：" + e.getMessage());
+                    GlassToast.error(XpModuleAiActivity.this, "解析失败：" + e.getMessage());
                 }
             }
 
@@ -375,14 +390,14 @@ public class XpModuleAiActivity extends BaseActivity {
                 running = false;
                 appendLog("✗ AI 请求失败：" + t.getMessage());
                 setStatus("AI 请求失败：" + t.getMessage());
-                RxToast.error("AI 请求失败：" + t.getMessage());
+                GlassToast.error(XpModuleAiActivity.this, "AI 请求失败：" + t.getMessage());
             }
         });
     }
 
     private void importAll() {
         if (parsedList == null || parsedList.isEmpty()) {
-            RxToast.warning("没有可导入的配置");
+            GlassToast.warning(XpModuleAiActivity.this, "没有可导入的配置");
             return;
         }
         int added = 0, skipped = 0;
@@ -401,21 +416,21 @@ public class XpModuleAiActivity extends BaseActivity {
         }
         appendLog("导入完成：新增 " + added + " 个，跳过 " + skipped + " 个（已存在或无效）。");
         parsedList = null;
-        RxToast.success("导入完成：新增 " + added + " 个，跳过 " + skipped + " 个");
+        GlassToast.success(XpModuleAiActivity.this, "导入完成：新增 " + added + " 个，跳过 " + skipped + " 个");
         setStatus("导入完成。");
     }
 
     private void openAiSettings() {
         new android.app.AlertDialog.Builder(this)
                 .setTitle("AI 设置")
-                .setMessage("请先在 AI 设置里配置 base_url / API Key / 模型名。\n\n点击确定打开「AI 分析」页面完成设置。")
+                .setMessage("请先在 AI 设置里配置 base_url / API Key / 模型名。")
                 .setPositiveButton("去设置", new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface d, int which) {
                         try {
-                            startActivity(new Intent(XpModuleAiActivity.this, cn.mhook.activity.ai.AiActivity.class));
+                            startActivity(new Intent(XpModuleAiActivity.this, cn.mhook.activity.ai.AiSettingActivity.class));
                         } catch (Throwable t) {
-                            RxToast.error("无法打开 AI 设置页");
+                            GlassToast.error(XpModuleAiActivity.this, "无法打开 AI 设置页");
                         }
                     }
                 })

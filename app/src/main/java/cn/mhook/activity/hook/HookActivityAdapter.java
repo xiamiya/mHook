@@ -1,10 +1,10 @@
 package cn.mhook.activity.hook;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.CheckBox;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.LayoutRes;
@@ -14,28 +14,21 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.viewholder.BaseViewHolder;
-import com.lxj.xpopup.XPopup;
-import com.lzf.easyfloat.permission.PermissionUtils;
-import com.nightonke.boommenu.BoomButtons.HamButton;
-import com.nightonke.boommenu.BoomButtons.OnBMClickListener;
-import com.nightonke.boommenu.BoomMenuButton;
 import com.tamsiree.rxkit.RxActivityTool;
 import com.tamsiree.rxkit.RxAppTool;
 import com.tamsiree.rxkit.RxClipboardTool;
-import com.tamsiree.rxkit.RxEncodeTool;
 import com.tamsiree.rxkit.RxTool;
-import com.tamsiree.rxkit.view.RxToast;
+import com.lzf.easyfloat.permission.PermissionUtils;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import cn.mhook.activity.MainActivity;
 import cn.mhook.activity.editcfg.EditHookActivity;
 import cn.mhook.floatprint.FloatActivity;
-import cn.mhook.mhook.CustomPopup;
 import cn.mhook.mhook.R;
 import cn.mhook.mhook.contentprovider.jsonCfg;
+import cn.mhook.widget.GlassToast;
 
 
 public class HookActivityAdapter extends BaseQuickAdapter<HookActivityItem, BaseViewHolder> {
@@ -58,156 +51,130 @@ public class HookActivityAdapter extends BaseQuickAdapter<HookActivityItem, Base
 
     @Override
     protected void convert(final BaseViewHolder helper, final HookActivityItem item) {
-        helper.setText(R.id.appName,item.getAppName())
-                .setText(R.id.ver,item.getVer())
-                .setText(R.id.pkg,item.getPkg())
-                .setText(R.id.detail,item.getDetail())
-                .setText(R.id.author,item.getAuthor())
-                .setText(R.id.time,item.getTime());
+        helper.setText(R.id.appName, item.getAppName())
+                .setText(R.id.ver, item.getVer())
+                .setText(R.id.pkg, item.getPkg())
+                .setText(R.id.detail, item.getDetail())
+                .setText(R.id.author, item.getAuthor())
+                .setText(R.id.time, item.getTime());
 
-
-        if (item.getCfgId()!=null&&!item.getCfgId().isEmpty()){
-            helper.setVisible(R.id.num_backgroud,true);
-        }else {
+        if (item.getCfgId() != null && !item.getCfgId().isEmpty()) {
+            helper.setVisible(R.id.num_backgroud, true);
         }
 
-
-        final BoomMenuButton bmb2 = helper.getView(R.id.bmb2);
-        initMenu(bmb2,item);
         final CheckBox selectBox = helper.getView(R.id.selectBox);
         selectBox.setVisibility(selectMode ? View.VISIBLE : View.GONE);
         selectBox.setChecked(selectMode && selected.contains(item.getCfgKey()));
         helper.getView(R.id.cfgInfoItem).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (selectMode){
-                    if (selectListener != null){
+                if (selectMode) {
+                    if (selectListener != null) {
                         selectListener.onSelectToggle(item);
                     }
-                }else {
-                    bmb2.boom();
+                } else {
+                    showItemMenu(item);
                 }
             }
         });
         helper.getView(R.id.cfgInfoItem).setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                if (selectListener == null){
+                if (selectListener == null) {
                     return true;
                 }
-                if (selectMode){
+                if (selectMode) {
                     selectListener.onSelectToggle(item);
-                }else {
+                } else {
                     selectListener.onLongPress(item);
                 }
                 return true;
             }
         });
         final TextView enableTip = helper.getView(R.id.enableTip);
-        final LinearLayout enableLay = helper.getView(R.id.enableLayout);
-        if (item.getEnable()){
+        if (item.getEnable()) {
             enableTip.setText("已启用");
-            enableLay.setBackgroundColor(getContext().getResources().getColor(R.color.green));
-        }else {
+            enableTip.setTextColor(getContext().getResources().getColor(R.color.glass_accent_green));
+        } else {
             enableTip.setText("已禁用");
-            enableLay.setBackgroundColor(getContext().getResources().getColor(R.color.app_color_theme_3));
+            enableTip.setTextColor(getContext().getResources().getColor(R.color.glass_text_tertiary));
         }
-        enableLay.setOnClickListener(new View.OnClickListener() {
+        helper.getView(R.id.enableLayout).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (enableTip.getText().equals("已启用")){
+                if (enableTip.getText().equals("已启用")) {
                     enableTip.setText("已禁用");
-                    jsonCfg.setEnable(false,item.getCfgKey());
-                    enableLay.setBackgroundColor(getContext().getResources().getColor(R.color.app_color_theme_3));
-                }else {
+                    enableTip.setTextColor(getContext().getResources().getColor(R.color.glass_text_tertiary));
+                    jsonCfg.setEnable(false, item.getCfgKey());
+                } else {
                     enableTip.setText("已启用");
-                    jsonCfg.setEnable(true,item.getCfgKey());
-                    enableLay.setBackgroundColor(getContext().getResources().getColor(R.color.green));
+                    enableTip.setTextColor(getContext().getResources().getColor(R.color.glass_accent_green));
+                    jsonCfg.setEnable(true, item.getCfgKey());
                 }
             }
         });
-        final String appver = RxAppTool.getAppVersionName(getContext(),item.getPkg());
+        final String appver = RxAppTool.getAppVersionName(getContext(), item.getPkg());
         int err = 1;
-        if (appver!=null&&appver.equals(item.getVer())){
+        if (appver != null && appver.equals(item.getVer())) {
             err--;
         }
-        if (err==0){
-            helper.setBackgroundColor(R.id.errLayout,getContext().getResources().getColor(R.color.green));
-        }
+        final TextView errView = helper.getView(R.id.err);
+        errView.setText(" " + err + " ");
+        errView.setTextColor(getContext().getResources().getColor(err == 0 ? R.color.glass_accent_green : R.color.glass_accent_red));
         helper.getView(R.id.errLayout).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                new XPopup.Builder(getContext())
-                        .asCustom(new CustomPopup(getContext(),item.getVer(),appver))
+                new AlertDialog.Builder(getContext())
+                        .setTitle("版本对比")
+                        .setMessage("配置检测：" + (item.getVer().equals(appver) ? "通过" : "不通过")
+                                + "\n\n配置版本：" + item.getVer()
+                                + "\n应用版本：" + (appver == null ? "未安装" : appver))
+                        .setNegativeButton("关闭", null)
                         .show();
             }
         });
-        helper.setText(R.id.err," "+err+" ");
     }
 
-    private void initMenu(BoomMenuButton bmb2,final HookActivityItem item){
-        bmb2.clearBuilders();
-        bmb2.addBuilder(new HamButton.Builder()
-                .normalImageRes(R.drawable.eagle)
-                .normalText("打开应用")
-                .listener(new OnBMClickListener() {
+    private void showItemMenu(final HookActivityItem item) {
+        final String[] items = {"打开应用", "修改配置", "以调试模式启动", "分享配置"};
+        new AlertDialog.Builder(getContext())
+                .setTitle(item.getAppName())
+                .setItems(items, new android.content.DialogInterface.OnClickListener() {
                     @Override
-                    public void onBoomButtonClick(int index) {
-                        if (RxAppTool.isInstallApp(getContext(),item.getPkg())){
-                            RxAppTool.launchApp(getContext(),item.getPkg());
-                        }else {
-                            RxToast.error("未安装该应用");
-                        }
-                    }
-                })
-                .subNormalText("打开配置对应的应用"));
-        bmb2.addBuilder(new HamButton.Builder()
-                .normalImageRes(R.drawable.eagle)
-                .normalText("修改配置")
-                .listener(new OnBMClickListener() {
-                    @Override
-                    public void onBoomButtonClick(int index) {
-                        Bundle bundle = new Bundle();
-                        bundle.putString("KeyStr",item.getCfgKey());
-                        RxActivityTool.skipActivity(getContext(), EditHookActivity.class,bundle);
-                    }
-                })
-                .subNormalText("修改配置文件"));
-        bmb2.addBuilder(new HamButton.Builder()
-                .normalImageRes(R.drawable.eagle)
-                .normalText("以调试模式启动")
-                .listener(new OnBMClickListener() {
-                    @Override
-                    public void onBoomButtonClick(int index) {
-                        if (RxAppTool.isInstallApp(getContext(),item.getPkg())){
-                            new FloatActivity(activity,getContext());
-                            if (PermissionUtils.checkPermission(getContext())){
-                                RxAppTool.launchApp(RxTool.getContext(),item.getPkg());
+                    public void onClick(android.content.DialogInterface dialog, int which) {
+                        if (which == 0) {
+                            if (RxAppTool.isInstallApp(getContext(), item.getPkg())) {
+                                RxAppTool.launchApp(getContext(), item.getPkg());
+                            } else {
+                                GlassToast.error(getContext(), "未安装该应用");
                             }
-                        }else {
-                            RxToast.error("未安装该应用");
+                        } else if (which == 1) {
+                            Bundle bundle = new Bundle();
+                            bundle.putString("KeyStr", item.getCfgKey());
+                            RxActivityTool.skipActivity(getContext(), EditHookActivity.class, bundle);
+                        } else if (which == 2) {
+                            if (RxAppTool.isInstallApp(getContext(), item.getPkg())) {
+                                new FloatActivity(activity, getContext());
+                                if (PermissionUtils.checkPermission(getContext())) {
+                                    RxAppTool.launchApp(RxTool.getContext(), item.getPkg());
+                                }
+                            } else {
+                                GlassToast.error(getContext(), "未安装该应用");
+                            }
+                        } else if (which == 3) {
+                            JSONObject cfg = jsonCfg.getCfgByKey(item.getCfgKey());
+                            if (cfg == null) {
+                                GlassToast.error(getContext(), "配置不存在");
+                                return;
+                            }
+                            JSONArray hooks = cfg.getJSONArray("hooks");
+                            JSONObject share = HookImport.exportConfig(cfg, hooks);
+                            RxClipboardTool.copyText(getContext(), share.toJSONString());
+                            GlassToast.success(getContext(), "已复制配置到剪贴板");
                         }
                     }
                 })
-                .subNormalText("打开调试窗并启动应用"));
-        bmb2.addBuilder(new HamButton.Builder()
-                .normalImageRes(R.drawable.eagle)
-                .normalText("分享配置")
-                .listener(new OnBMClickListener() {
-                    @Override
-                    public void onBoomButtonClick(int index) {
-                        JSONObject cfg = jsonCfg.getCfgByKey(item.getCfgKey());
-                        if (cfg == null){
-                            RxToast.error("配置不存在");
-                            return;
-                        }
-                        JSONArray hooks = cfg.getJSONArray("hooks");
-                        JSONObject share = HookImport.exportConfig(cfg, hooks);
-                        RxClipboardTool.copyText(getContext(), share.toJSONString());
-                        RxToast.success("已复制配置到剪贴板");
-                    }
-                })
-                .subNormalText("复制配置JSON到剪贴板"));
+                .show();
     }
 
     public void setSelected(Set<String> selected) {
