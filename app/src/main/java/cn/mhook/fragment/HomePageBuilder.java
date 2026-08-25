@@ -130,7 +130,7 @@ public class HomePageBuilder {
                         R.drawable.ic_shield, cyan, "需Xposed", orange, GlassItem.TYPE_NAV, new View.OnClickListener() {
                             @Override public void onClick(View v) { RxActivityTool.skipActivity(context, DumpActivity.class); }
                         }));
-                list.add(new GlassItem("沙箱脱壳", "选APK自动装入沙箱运行并dump，全程免root",
+                list.add(new GlassItem("沙箱脱壳", "选APK自动装入沙箱运行并dump，主动加载+补码回收，全程免root",
                         R.drawable.ic_sandbox, green, "免root", green, GlassItem.TYPE_NAV, new View.OnClickListener() {
                             @Override public void onClick(View v) { RxActivityTool.skipActivity(context, SandboxDumpActivity.class); }
                         }));

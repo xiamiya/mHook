@@ -158,7 +158,7 @@
         android:layout_marginTop="10dp"
         android:layout_marginBottom="10dp"
         android:gravity="center"
-        android:text="注：选择 APK 后自动装入沙箱静默运行并 dump dex，全程免root。兼容绝大多数应用，个别带强保护的加固应用可能受沙箱环境影响而无法完成，敬请谅解"
+        android:text="注：选择 APK 后自动装入沙箱静默运行并 dump dex，主动加载全部类触发补码回收，全程免root。兼容绝大多数应用，个别带强保护的加固应用可能受沙箱环境影响而无法完成，敬请谅解"
         android:textColor="@color/glass_text_tertiary"
         android:textSize="12sp" />
 </LinearLayout>
