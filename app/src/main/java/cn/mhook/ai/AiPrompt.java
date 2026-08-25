@@ -90,6 +90,7 @@ public class AiPrompt {
             sb.append("【工具后端（MCP）】\n");
             sb.append("你已接入逆向工具后端，通过 function calling 调用。每个可用工具的名字都是 mcp__服务器名__工具名，且一定出现在本轮下发给你的 tools 函数列表中。\n");
             sb.append("工具名前缀（mcp__后面的服务器名）只能取下面已启用服务器里的实际名称，不要臆造前缀：\n");
+            sb.append("- 前缀 garlic（Garlic 反编译器，本地内置，无需远程连接）\n");
             JSONArray servers = McpSetting.getServers(ctx);
             for (Object o : servers) {
                 JSONObject s = (JSONObject) o;
@@ -101,8 +102,10 @@ public class AiPrompt {
                 sb.append("- 前缀 ").append(name).append("（").append(label == null ? name : label).append("，")
                         .append(s.getString("url")).append("）\n");
             }
-            sb.append("\n职责分工与铁律（按工具名的 so_*/mt_*/proxy 等前缀区分用途；前缀 mcp__服务器名 用上表已启用的实际名称）：\n");
+            sb.append("\n职责分工与铁律（按工具名的 so_*/mt_*/proxy/garlic__* 等前缀区分用途；前缀 mcp__服务器名 用上表已启用的实际名称）：\n");
+            sb.append("- garlic__* 用于 APK/DEX/JAR 反编译与静态分析：analyze（一键分析反编译+call graph+DuckDB）、decompile（纯反编译）、dump_info（快速结构检查）、call_graph（生成调用图 CSV）、cg_query（SQL 查询 call graph）、android_manifest（读取清单）、analyze_elf（分析 SO ELF）、trace_flow（追踪执行路径）。garlic 是本地内置工具，分析效率极高（200MB APK 约12秒）。\n");
             sb.append("- so_* 只用于 .so/native/ELF（so_open/analyze_*/read_disasm/edit_asm(dryRun=true 预演)/build_so/unidbg_*/emulate_call），绝不用 mt_apk_* 打开或分析 .so。\n");
+            sb.append("- garlic__* 用于 APK/DEX/JAR 静态分析（反编译/call graph/DuckDB/ELF 分析），是最高效的反编译工具。\n");
             sb.append("- mt_apk_* 只做 APK 外层：mt_apk_open、mt_apk_list(view=lib/<abi> 可列 native 库)、smali/AXML 编辑、重签名打包 mt_apk_build。\n");
             sb.append("- 网络请求/接口签名分析用 ProxyPin 抓包工具，不要用静态工具猜。\n");
             sb.append("- 玄星逆核覆盖：反编译 jadx_decompile(dex→java)/baksmali_decode(dex→smali)/apk_decode/apk_analyze；SO 静态分析 so_open→analyze_elf→analyze_functions→analyze_crypto→analysis_report；脱壳 dex_unpack（先让目标 App 运行使壳解密 dex 进内存）；回编签名 smali_assemble/apk_rebuild/apk_sign；动态 frida_control；Flutter flutter_blutter。\n");
@@ -193,6 +196,11 @@ public class AiPrompt {
         sb.append("用户需求：").append(requirement == null ? "" : requirement);
         return sb.toString();
     }
+
+    /**
+     * AI 脱壳：garlic 反编译 + unidbg 模拟执行 + 直接产出脱壳文件。
+     * 目标：真正还原出可用的 dex/apk 文件并落盘，不输出 JSON 契约。
+     */
 
     private static String joinSkills(String[] arr){
         StringBuilder sb = new StringBuilder();

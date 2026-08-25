@@ -46,6 +46,7 @@ public class SandboxDumpActivity extends Activity {
     private TextView logView;
     private TextView cleanBtn;
     private StringBuilder logBuffer = new StringBuilder();
+    private String sDumpLog = "";
     private Handler handler = new Handler(Looper.getMainLooper());
 
     private volatile String currentPkg;
@@ -333,6 +334,11 @@ public class SandboxDumpActivity extends Activity {
                                     logLine(zipInfo != null ? "导出完成：" + zipInfo : "导出失败");
                                     if (zipInfo != null) logLine("已清理应用目录中的临时脱壳文件");
                                     logLine("已卸载沙箱内应用，释放空间");
+                                    if (sDumpLog != null && !sDumpLog.trim().isEmpty()) {
+                                        logLine("\n──── 沙箱脱壳诊断日志 ────");
+                                        logLine(sDumpLog.trim());
+                                        logLine("──── 诊断日志(已随 zip 打包 file: dump_log.txt) ────");
+                                    }
                                     sDoneStatus = "脱壳完成，共 " + c + " 个 dex"
                                             + (zipInfo != null ? "\n导出完成：" + zipInfo : "");
                                     sDoneLog = logBuffer.toString();
@@ -430,6 +436,17 @@ public class SandboxDumpActivity extends Activity {
 
     /** 把已 dump 的 dex 打包成 zip 并导出到系统 Download 目录（API 29+ 用 MediaStore）。返回展示用路径，失败返回 null。 */
     private String exportZip(final String pkg, final File outDir) {
+        // 读取脱壳诊断日志（若有），供完成回调追加到 UI
+        sDumpLog = "";
+        try {
+            java.io.File lf = outDir != null ? new java.io.File(outDir, "dump_log.txt") : null;
+            java.io.File af = outDir != null ? new java.io.File(outDir, "active_load.txt") : null;
+            StringBuilder sb = new StringBuilder();
+            if (af != null && af.exists()) sb.append(summaryOfActive(new String(readAll(af), "UTF-8")));
+            if (lf != null && lf.exists()) sb.append(new String(readAll(lf), "UTF-8"));
+            sDumpLog = sb.toString();
+        } catch (Throwable ignored) {
+        }
         try {
             File[] files = outDir != null ? outDir.listFiles() : null;
             if (files == null || files.length == 0) return null;
@@ -437,7 +454,12 @@ public class SandboxDumpActivity extends Activity {
             for (File f : files) {
                 if (f.getName().endsWith(".dex")) dexes.add(f);
             }
-            if (dexes.isEmpty()) return null;
+            // 顺带打包脱壳日志
+            File logFile = outDir != null ? new File(outDir, "dump_log.txt") : null;
+            if (logFile != null && !logFile.exists()) logFile = null;
+            File activeFile = outDir != null ? new File(outDir, "active_load.txt") : null;
+            if (activeFile != null && !activeFile.exists()) activeFile = null;
+            if (dexes.isEmpty() && logFile == null && activeFile == null) return null;
             String name = "sandbox_dump_" + pkg + "_" +
                     new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".zip";
             Uri savedUri = null;
@@ -465,7 +487,10 @@ public class SandboxDumpActivity extends Activity {
             ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(os));
             try {
                 byte[] buf = new byte[8192];
-                for (File f : dexes) {
+                java.util.List<java.io.File> toZip = new java.util.ArrayList<>(dexes);
+                if (logFile != null) toZip.add(logFile);
+                if (activeFile != null) toZip.add(activeFile);
+                for (File f : toZip) {
                     ZipEntry entry = new ZipEntry(f.getName());
                     zos.putNextEntry(entry);
                     FileInputStream in = new FileInputStream(f);
@@ -501,6 +526,39 @@ public class SandboxDumpActivity extends Activity {
             i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(i);
         } catch (Throwable ignored) {
+        }
+    }
+
+    /** 从 active_load 全文提取摘要：application/factory/类总数/加载成功，省略完整类列表。 */
+    private static String summaryOfActive(String full) {
+        if (full == null || full.isEmpty()) return "";
+        // 不依赖分隔线星号数量：直接按关键文字定位
+        int hIdx = full.indexOf("主动加载类");
+        if (hIdx < 0) return full.endsWith("\n") ? full : full + "\n";
+        int nl = full.indexOf('\n', hIdx);
+        String head = (nl >= 0 ? full.substring(0, nl)
+                : full.substring(0, Math.min(hIdx + 24, full.length()))).trim();
+        StringBuilder sb = new StringBuilder(head).append("\n");
+        int sIdx = full.indexOf("加载成功", hIdx);
+        if (sIdx >= 0) {
+            int snl = full.indexOf('\n', sIdx);
+            sb.append((snl >= 0 ? full.substring(sIdx, snl)
+                    : full.substring(sIdx)).trim()).append("\n");
+        }
+        sb.append("（完整类列表见 zip 内 active_load.txt）\n");
+        return sb.toString();
+    }
+
+    private static byte[] readAll(java.io.File f) throws Exception {
+        FileInputStream in = new FileInputStream(f);
+        try {
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            byte[] b = new byte[8192];
+            int n;
+            while ((n = in.read(b)) != -1) bos.write(b, 0, n);
+            return bos.toByteArray();
+        } finally {
+            in.close();
         }
     }
 

@@ -30,6 +30,7 @@ public class AiSession {
 
     public static final int MAX_STEPS = 32;
     private static volatile int maxSteps = MAX_STEPS;
+    private static volatile boolean unlimited = false;
     private static volatile boolean stopFlag = false;
     private static final List<String> availableTools = new ArrayList<String>();
 
@@ -37,10 +38,28 @@ public class AiSession {
         stopFlag = true;
     }
 
+    /** 按 AiSetting 默认步数运行（有上下限限制）。 */
     public static void run(final Context ctx, final String system, final String user, final Listener listener) {
         stopFlag = false;
+        unlimited = false;
         maxSteps = AiSetting.maxSteps(ctx);
         if (maxSteps <= 0) maxSteps = MAX_STEPS;
+        startLoop(ctx, system, user, listener);
+    }
+
+    /**
+     * 无限模式：AI 脱壳专用。
+     * 不限制工具调用轮次（除非用户手动停止）；单轮看门狗时间放宽到 15 分钟，
+     * 避免 unidbg 模拟执行耗时被误杀。
+     */
+    public static void runUnlimited(final Context ctx, final String system, final String user, final Listener listener) {
+        stopFlag = false;
+        unlimited = true;
+        maxSteps = Integer.MAX_VALUE;
+        startLoop(ctx, system, user, listener);
+    }
+
+    private static void startLoop(final Context ctx, final String system, final String user, final Listener listener) {
         availableTools.clear();
         final Handler main = new Handler(Looper.getMainLooper());
         new Thread(new Runnable() {
@@ -51,6 +70,7 @@ public class AiSession {
                 messages.add(msg("user", user));
                 final JSONArray tools = new JSONArray();
                 final List<String> errors = new ArrayList<String>();
+
                 try {
                     List<McpManager.McpTool> mcpTools = McpManager.collectTools(ctx, errors);
                     for (McpManager.McpTool t : mcpTools) {
@@ -99,7 +119,10 @@ public class AiSession {
             });
             return;
         }
-        final long watchdogMs = Math.max(45_000, AiSetting.timeout(ctx));
+        final long watchdogMs = unlimited
+                ? Math.max(900_000, AiSetting.timeout(ctx))
+                : Math.max(45_000, AiSetting.timeout(ctx));
+        final int[] retries = {0};
         final Runnable[] watchdog = new Runnable[1];
         watchdog[0] = new Runnable() {
             @Override
@@ -114,11 +137,46 @@ public class AiSession {
                 listener.onDone("");
             }
         };
+        // 每轮开始时即武装看门狗：若本轮请求自始至终无任何流式输出（挂起/空响应），也能超时终止
+        main.postDelayed(watchdog[0], watchdogMs);
+        // 重复输出检测：同一结尾片段连续重复（模型生成退化循环）时自动终止
+        final String[] lastChunk = {""};
+        final int[] sameChunkCount = {0};
+        final long[] lastChunkTime = {0};
+        final int REPEAT_LIMIT = 12;
         AiClient.complete(ctx, messages, tools, new AiClient.Listener() {
             @Override
             public void onDelta(String text) {
                 main.removeCallbacks(watchdog[0]);
                 main.postDelayed(watchdog[0], watchdogMs);
+                if (text != null && text.trim().length() >= 2) {
+                    String chunk = text.trim();
+                    long now = System.currentTimeMillis();
+                    if (chunk.equals(lastChunk[0]) && now - lastChunkTime[0] < 4000) {
+                        sameChunkCount[0]++;
+                        if (sameChunkCount[0] >= REPEAT_LIMIT) {
+                            stopFlag = true;
+                            final String loopTip = "\n\n[已自动终止] 检测到 AI 输出陷入重复循环（同一片段连续出现 "
+                                    + REPEAT_LIMIT + " 次），已停止以免浪费 token。请重新发起分析。\n\n";
+                            main.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        main.removeCallbacks(watchdog[0]);
+                                    } catch (Throwable ignored) {
+                                    }
+                                    listener.onToolEvent(loopTip);
+                                    listener.onDone("");
+                                }
+                            });
+                            return;
+                        }
+                    } else {
+                        sameChunkCount[0] = 1;
+                    }
+                    lastChunk[0] = chunk;
+                    lastChunkTime[0] = now;
+                }
                 listener.onDelta(text);
             }
 
@@ -141,9 +199,31 @@ public class AiSession {
                     public void run() {
                         try {
                             JSONObject assistant = new JSONObject(true);
-                            assistant.put("role", "assistant");
-                            assistant.put("content", "");
-                            assistant.put("tool_calls", toolCalls);
+assistant.put("role", "assistant");
+                    assistant.put("content", "");
+                    // 清洗 tool_calls：确保 function.arguments 是合法 JSON 字符串，避免 provider 400
+                    for (Object o : toolCalls) {
+                        try {
+                            JSONObject tc = (JSONObject) o;
+                            JSONObject fn = tc.getJSONObject("function");
+                            if (fn != null) {
+                                String a = fn.getString("arguments");
+                                if (a == null || a.trim().isEmpty()) {
+                                    fn.put("arguments", "{}");
+                                } else {
+                                    JSON.parseObject(a); // 校验；非法则替换
+                                    fn.put("arguments", a.trim());
+                                }
+                            }
+                        } catch (Throwable bad) {
+                            try {
+                                JSONObject tc = (JSONObject) o;
+                                JSONObject fn = tc.getJSONObject("function");
+                                if (fn != null) fn.put("arguments", "{}");
+                            } catch (Throwable ignored) {}
+                        }
+                    }
+                    assistant.put("tool_calls", toolCalls);
                             messages.add(assistant);
                             for (Object o : toolCalls) {
                                 if (stopFlag) {
@@ -217,7 +297,18 @@ public class AiSession {
             public void onDone(String fullText) {
                 main.removeCallbacks(watchdog[0]);
                 if (fullText == null || fullText.trim().isEmpty()) {
-                    listener.onToolEvent("\n\n[AI 空响应] 本轮请求返回 HTTP 200 但未包含任何内容（可能是上下文过长或模型输出被截断）。建议：缩短需求描述，或在 AI 设置中调大 max_tokens，然后重新分析。\n\n");
+                    if (step < maxSteps && retries[0] < 2 && !stopFlag) {
+                        retries[0]++;
+                        android.util.Log.i("AiSession", "empty response, retrying round " + step + " (" + retries[0] + "/2)");
+                        main.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                runRound(ctx, messages, tools, step, main, listener);
+                            }
+                        });
+                        return;
+                    }
+                    listener.onToolEvent("\n\n[AI 空响应] 请求返回 HTTP 200 但无内容（可能上下文过长或输出被截断，已自动重试 " + retries[0] + " 次）。建议缩短分析范围或在 AI 设置中调大 max_tokens。\n\n");
                 }
                 listener.onDone(fullText);
             }

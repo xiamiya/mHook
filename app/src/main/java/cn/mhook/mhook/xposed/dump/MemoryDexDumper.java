@@ -46,6 +46,8 @@ public class MemoryDexDumper {
     private static boolean sDiagnosedNative;
 
     public static void init(final XC_LoadPackage.LoadPackageParam lpparam) {
+        DumpLogger.setPkg(lpparam.packageName);
+        DumpLogger.event("入口", "Application.attachBaseContext / 脱壳模块装载, pkg=" + lpparam.packageName);
         probeLayout("DexCache");
         probeLayout("DexFile");
         hookInMemoryDexClassLoader(lpparam);
@@ -53,6 +55,7 @@ public class MemoryDexDumper {
         hookDexFile(lpparam);
         // 不 hook loadClass：会频繁触发原生内存读取，易被加固（如阿里 Ashield）检测崩溃。
         // 改为延迟后台一次性枚举已加载 dex，用 cookie 的 begin/size 精确定位读取（BlackDex 思路）。
+        DumpLogger.event("入口", "hook 注册完成: InMemoryDex/DexClassLoader/DexFile");
         sAppClassLoader = lpparam.classLoader;
         scheduleDumpAll();
     }
@@ -84,8 +87,10 @@ public class MemoryDexDumper {
                         long el = System.currentTimeMillis() - start;
                         if (round < at.length && el >= at[round]) {
                             round++;
+                            DumpLogger.event("枚举", "第" + round + "轮定时枚举开始");
                             try { dumpAllLoadedDexes(); } catch (Throwable ignored) {
                             }
+                            DumpLogger.writeSummary();
                         }
                     } catch (Throwable ignored) {
                     }
@@ -144,8 +149,10 @@ public class MemoryDexDumper {
         byte[] data = UnsafeAccess.readArtDex(c);
         if (data != null) {
             dumpDex(data);
+            DumpLogger.enumHit(true);
             return true;
         }
+        DumpLogger.enumHit(false);
         return false;
     }
 
@@ -156,7 +163,9 @@ public class MemoryDexDumper {
                     ByteBuffer.class, ClassLoader.class, new XC_MethodHook() {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                            dumpByteBuffer((ByteBuffer) param.args[0]);
+                            DumpLogger.hookHit("InMemoryDexClassLoader");
+                            boolean ok = dumpByteBuffer((ByteBuffer) param.args[0]);
+                            if (ok) DumpLogger.hookValid("InMemoryDexClassLoader");
                         }
                     });
         } catch (Throwable ignored) {
@@ -166,11 +175,14 @@ public class MemoryDexDumper {
                     ByteBuffer[].class, ClassLoader.class, new XC_MethodHook() {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            DumpLogger.hookHit("InMemoryDexClassLoader");
                             ByteBuffer[] buffers = (ByteBuffer[]) param.args[0];
                             if (buffers == null) return;
+                            boolean ok = false;
                             for (ByteBuffer buffer : buffers) {
-                                dumpByteBuffer(buffer);
+                                if (dumpByteBuffer(buffer)) ok = true;
                             }
+                            if (ok) DumpLogger.hookValid("InMemoryDexClassLoader");
                         }
                     });
         } catch (Throwable ignored) {
@@ -184,7 +196,10 @@ public class MemoryDexDumper {
                     String.class, String.class, String.class, ClassLoader.class, new XC_MethodHook() {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            DumpLogger.hookHit("DexClassLoader");
+                            int before = DumpLogger.dumpedCount();
                             dumpDexPath((String) param.args[0]);
+                            if (DumpLogger.dumpedCount() > before) DumpLogger.hookValid("DexClassLoader");
                         }
                     });
         } catch (Throwable ignored) {
@@ -197,7 +212,10 @@ public class MemoryDexDumper {
                     String.class, new XC_MethodHook() {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            DumpLogger.hookHit("DexFile");
+                            int before = DumpLogger.dumpedCount();
                             dumpDexPath((String) param.args[0]);
+                            if (DumpLogger.dumpedCount() > before) DumpLogger.hookValid("DexFile");
                         }
                     });
         } catch (Throwable ignored) {
@@ -207,8 +225,13 @@ public class MemoryDexDumper {
                     File.class, new XC_MethodHook() {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            DumpLogger.hookHit("DexFile");
                             File f = (File) param.args[0];
-                            if (f != null) dumpDexPath(f.getAbsolutePath());
+                            if (f != null) {
+                                int before = DumpLogger.dumpedCount();
+                                dumpDexPath(f.getAbsolutePath());
+                                if (DumpLogger.dumpedCount() > before) DumpLogger.hookValid("DexFile");
+                            }
                         }
                     });
         } catch (Throwable ignored) {
@@ -251,19 +274,21 @@ public class MemoryDexDumper {
         }
     }
 
-    private static void dumpByteBuffer(ByteBuffer buffer) {
+    private static boolean dumpByteBuffer(ByteBuffer buffer) {
         try {
-            if (buffer == null) return;
+            if (buffer == null) return false;
             ByteBuffer dup = buffer.duplicate();
             dup.position(0);
             int remaining = dup.remaining();
-            if (remaining < 0x70 || remaining > 256L * 1024 * 1024) return;
-            if (!isDexBuffer(dup)) return;
+            if (remaining < 0x70 || remaining > 256L * 1024 * 1024) return false;
+            if (!isDexBuffer(dup)) return false;
             byte[] data = new byte[remaining];
             dup.get(data);
             dumpDex(data);
+            return true;
         } catch (Throwable t) {
             XposedBridge.log("MemoryDexDumper dumpByteBuffer failed: " + t);
+            return false;
         }
     }
 
@@ -442,7 +467,22 @@ public class MemoryDexDumper {
             file.setWritable(true, false);
         } catch (Throwable ignored) {
         }
-        XposedBridge.log("MemoryDexDumper dump: " + file.getName() + " size=" + data.length);
+        // 方法体体检：区分「完整 dex」与「方法抽取壳骨架」
+        try {
+            DexInspector.Result ins = DexInspector.inspect(data);
+            if (ins != null) {
+                XposedBridge.log("MemoryDexDumper dump: " + file.getName() + " size=" + data.length
+                        + " 体检=(" + ins.summary + ")");
+                DumpLogger.registerDump(ins.isSkeleton, file.getName() + " " + ins.summary);
+            } else {
+                XposedBridge.log("MemoryDexDumper dump: " + file.getName() + " size=" + data.length);
+                DumpLogger.registerDump(false, file.getName());
+            }
+        } catch (Throwable t) {
+            XposedBridge.log("MemoryDexDumper dump: " + file.getName() + " size=" + data.length
+                    + " 体检异常=" + t);
+            DumpLogger.registerDump(false, file.getName());
+        }
     }
 
     /** 内存读取封装：优先 sun.misc.Unsafe，失败回退 /proc/self/mem，避免隐藏 API 限制 */

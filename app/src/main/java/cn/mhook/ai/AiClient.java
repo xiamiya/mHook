@@ -38,6 +38,8 @@ public class AiClient {
 
     private static final ExecutorService pool = Executors.newSingleThreadExecutor();
     private static volatile boolean stopFlag = false;
+    private static volatile Thread runningThread = null;
+    private static volatile HttpURLConnection activeConn = null;
 
     public static void stream(final Context ctx, final String system, final String user, final Listener listener) {
         final JSONArray messages = new JSONArray();
@@ -52,6 +54,7 @@ public class AiClient {
         pool.execute(new Runnable() {
             @Override
             public void run() {
+                runningThread = Thread.currentThread();
                 final StringBuilder full = new StringBuilder();
                 final Map<Integer, JSONObject> toolCalls = new LinkedHashMap<Integer, JSONObject>();
                 HttpURLConnection conn = null;
@@ -68,6 +71,7 @@ public class AiClient {
                     }
 
                     conn = (HttpURLConnection) new URL(endpoint).openConnection();
+                    activeConn = conn;
                     conn.setRequestMethod("POST");
                     conn.setConnectTimeout(AiSetting.timeout(ctx));
                     conn.setReadTimeout(AiSetting.timeout(ctx));
@@ -196,16 +200,28 @@ public class AiClient {
                         }
                     });
                 } catch (final Throwable t) {
-                    main.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            listener.onError(t);
-                        }
-                    });
+                    if (stopFlag) {
+                        // 用户主动停止，不当作错误上报
+                        main.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                listener.onDone(full.toString());
+                            }
+                        });
+                    } else {
+                        main.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                listener.onError(t);
+                            }
+                        });
+                    }
                 } finally {
                     if (conn != null) {
                         conn.disconnect();
                     }
+                    if (activeConn == conn) activeConn = null;
+                    runningThread = null;
                 }
             }
         });
@@ -213,6 +229,14 @@ public class AiClient {
 
     public static void stop() {
         stopFlag = true;
+        // 中断阻塞读流的线程，使 readLine() 抛 IOException 立即退出
+        Thread t = runningThread;
+        if (t != null) t.interrupt();
+        // 关闭连接，强制中断网络读取
+        HttpURLConnection c = activeConn;
+        if (c != null) {
+            try { c.disconnect(); } catch (Throwable ignored) {}
+        }
     }
 
     private static void addToolCall(Map<Integer, JSONObject> map, JSONObject tc, boolean complete) {
@@ -248,8 +272,17 @@ public class AiClient {
             }
             String args = fieldArgs(tc);
             if (args != null) {
+                // 流式片段有时同一 index 重复推送同一段内容；
+                // 若本次片段是上次完整拼接的后缀则跳过，避免重复拼接。
                 String prev = fn.getString("arguments");
-                fn.put("arguments", (prev == null ? "" : prev) + args);
+                if (prev == null) prev = "";
+                if (complete && args.equals(prev)) {
+                    return;
+                }
+                if (args.length() < prev.length() && prev.endsWith(args)) {
+                    return;
+                }
+                fn.put("arguments", prev + args);
             }
         }
     }

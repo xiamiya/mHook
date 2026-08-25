@@ -12,6 +12,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * MCP 工具管理器：收集/调用远程 MCP 服务器工具（AI 应用分析用）。
+ */
 public class McpManager {
 
     public static final int MAX_TOOL_OUTPUT = 30000;
@@ -57,8 +60,10 @@ public class McpManager {
         clients.clear();
     }
 
+    /** 收集所有可用远程 MCP 服务器工具。 */
     public static List<McpTool> collectTools(Context ctx, List<String> errors) {
         List<McpTool> out = new ArrayList<McpTool>();
+
         JSONArray servers = McpSetting.getServers(ctx);
         for (Object o : servers) {
             JSONObject s = (JSONObject) o;
@@ -88,6 +93,7 @@ public class McpManager {
                 errors.add(name + " 不可用（" + shortMsg(t) + "）");
             }
         }
+
         return out;
     }
 
@@ -98,6 +104,7 @@ public class McpManager {
         }
         String server = parts[1];
         String tool = parts[2];
+
         JSONObject s = McpSetting.findServer(ctx, server);
         if (s == null) {
             throw new IllegalArgumentException("未找到 MCP 服务器: " + server);
@@ -107,8 +114,11 @@ public class McpManager {
         }
         try {
             McpClient c = getClient(server, s.getString("url"), s.getString("token"));
-            return c.callTool(tool, args);
+            String r = c.callTool(tool, args);
+            android.util.Log.i("McpTool", server + "/" + tool + " => " + truncate(r, 300));
+            return r;
         } catch (Throwable t) {
+            android.util.Log.e("McpTool", server + "/" + tool + " threw: " + t.getMessage());
             invalidate(server);
             throw t;
         }
@@ -141,17 +151,17 @@ public class McpManager {
     }
 
     public static boolean isPortOpen(String host, int port) {
-        Socket s = null;
+        Socket sock = null;
         try {
-            s = new Socket();
-            s.connect(new InetSocketAddress(host, port), 500);
+            sock = new Socket();
+            sock.connect(new InetSocketAddress(host, port), 400);
             return true;
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
             return false;
         } finally {
-            if (s != null) {
+            if (sock != null) {
                 try {
-                    s.close();
+                    sock.close();
                 } catch (Throwable ignored) {
                 }
             }
@@ -159,20 +169,14 @@ public class McpManager {
     }
 
     public static String truncate(String s, int max) {
-        if (s == null) {
-            return "";
-        }
-        if (s.length() <= max) {
-            return s;
-        }
-        return s.substring(0, max) + "\n...[已截断，剩余 " + (s.length() - max) + " 字符]";
+        if (s == null) return "";
+        return s.length() <= max ? s : s.substring(0, max);
     }
 
     private static String shortMsg(Throwable t) {
+        if (t == null) return "";
         String m = t.getMessage();
-        if (m != null && m.length() > 60) {
-            m = m.substring(0, 60);
-        }
-        return m == null || m.isEmpty() ? t.getClass().getSimpleName() : m;
+        if (m == null || m.isEmpty()) m = t.getClass().getSimpleName();
+        return m.length() > 120 ? m.substring(0, 120) : m;
     }
 }

@@ -53,7 +53,7 @@ public class mHookApplication extends Application {
                             // 尽早启动脱壳：即使 onCreate 后续崩溃（如加固壳动态加载失败），也能先抓到已加载的 dex
                             File outDir = new File(BlackBoxCore.getContext().getFilesDir(),
                                     "sandbox_dump" + File.separator + packageName);
-                            cn.mhook.mhook.xposed.dump.SandboxDexDumper.start(outDir, application.getClassLoader());
+                            cn.mhook.mhook.xposed.dump.SandboxDexDumper.start(outDir, application.getClassLoader(), application);
                         }
                     } catch (Throwable ignored) {
                     }
@@ -66,7 +66,7 @@ public class mHookApplication extends Application {
                         if (packageName != null && packageName.equals(processName)) {
                             File outDir = new File(BlackBoxCore.getContext().getFilesDir(),
                                     "sandbox_dump" + File.separator + packageName);
-                            cn.mhook.mhook.xposed.dump.SandboxDexDumper.start(outDir, application.getClassLoader());
+                            cn.mhook.mhook.xposed.dump.SandboxDexDumper.start(outDir, application.getClassLoader(), application);
                         }
                     } catch (Throwable ignored) {
                     }
