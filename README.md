@@ -34,3 +34,6 @@ Release 签名请自行配置 `signingConfigs` 或使用外部签名工具。
 ## 开源致谢
 
 本应用基于多个开源项目构建，详见应用内「设置 → 关于 → 感谢开源项目」。
+
+点击链接加入群聊【mhook反馈】：https://qm.qq.com/q/dKZiaHGunm
+
