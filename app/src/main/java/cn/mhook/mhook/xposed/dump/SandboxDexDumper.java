@@ -38,6 +38,8 @@ public class SandboxDexDumper {
 
     /** 触发延迟 dump 轮次。可安全多次调用。 */
     private static volatile boolean sDiagLogged = false;
+    /** immediate 这一遍跑在目标 App 主线程，禁止做主动加载（会类初始化死锁） */
+    private static volatile boolean sImmediatePass = false;
 
     public static void start(File outDir, ClassLoader appClassLoader) {
         start(outDir, appClassLoader, null);
@@ -53,6 +55,7 @@ public class SandboxDexDumper {
         sStartCl = startCl;
         boolean first = !sStarted;
         sStarted = true;
+        Log.i(TAG, "start: first=" + first + " outDir=" + outDir + " app=" + application);
         try {
             if (!outDir.exists()) outDir.mkdirs();
         } catch (Throwable ignored) {
@@ -65,24 +68,35 @@ public class SandboxDexDumper {
         } catch (Throwable ignored) {
         }
         Log.i(TAG, "SandboxDexDumper.start out=" + outDir + " cl=" + startCl);
-        // 立即同步 dump 一次：部分加固应用进程在 beforeApplicationOnCreate 后极短时间（<1s）内
-        // 就会因壳检测/加载失败崩溃，等定时轮次（1s 起）来不及，需趁进程存活立刻抓取已加载的 dex。
+        // 主线程只做「轻量」的已加载 dex 枚举：必须快，否则会卡住目标 App 的 Application.onCreate，
+        // 导致它后面的 dex 永远加载不出来（典型表现：只抓得到第一阶段那几个 dex）。
+        // 内存 carve / 类主动加载 / 去重整理 这些重活全部挪到后台线程去做。
         try {
+            sImmediatePass = true;
             EnumStats st = dumpAllLoadedDexes(startCl);
-            scanMapsForDex(st);
-            installLoadHooks(outDir, startCl);
             Log.i(TAG, "immediate dump " + st.summary());
             hookHitLog(outDir, "立即枚举", st.summary());
         } catch (Throwable ignored) {
-        }
-        try {
-            DexConsolidator.consolidate(outDir);
-        } catch (Throwable ignored) {
+        } finally {
+            sImmediatePass = false;
         }
         if (!first) return;
         new Thread(new Runnable() {
             @Override
             public void run() {
+                Log.i(TAG, "loop thread started");
+                // 后台线程先把重活补上（内存 carve / hook / 去重整理），再进入定时轮次
+                try {
+                    EnumStats st = dumpAllLoadedDexes(sStartCl);
+                    scanMapsForDex(st);
+                    installLoadHooks(sOutDir, sStartCl);
+                    hookHitLog(sOutDir, "首轮补抓", st.summary());
+                } catch (Throwable ignored) {
+                }
+                try {
+                    DexConsolidator.consolidate(sOutDir);
+                } catch (Throwable ignored) {
+                }
                 // 定时轮次 + 尾部周期轮（65s~115s 每 10s 一轮）：覆盖更晚的延迟解密场景；
                 // 全部跑完自动退出线程，不再无限空转。
                 java.util.ArrayList<Long> sch = new java.util.ArrayList<>();
@@ -337,8 +351,11 @@ public class SandboxDexDumper {
             } catch (Throwable ignored) {
             }
             hookHitLog(out, "产出dex", detail);
-            // 骨架(抽取壳) → 主动加载类触发补码，并登记 cookie 供后续轮次回收
-            if (skeleton) {
+            // 骨架(抽取壳) → 主动加载类触发补码，并登记 cookie 供后续轮次回收。
+            // 注意：immediate 这一遍跑在目标 App 的主线程上，绝不能在这里加载它的类 ——
+            // 会与该线程自身的初始化互相等待（类初始化死锁），把 Application.onCreate 卡死，
+            // 后续 dex 就永远加载不出来。主动加载统一交给后台轮次。
+            if (skeleton && !sImmediatePass) {
                 try {
                     ActiveClassLoader.dumpAndTrigger(data, sStartCl, out, file.getName(), sApp);
                     if (cookie != 0) {
