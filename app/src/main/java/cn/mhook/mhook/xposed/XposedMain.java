@@ -100,7 +100,7 @@ public class XposedMain implements IXposedHookLoadPackage, IXposedHookZygoteInit
         try {
             StartDump.init();
         }catch (Throwable e){
-            Log.w("err","脱壳失败："+e.getMessage());
+            Log.w("err","动态分析失败："+e.getMessage());
         }
 
         try {

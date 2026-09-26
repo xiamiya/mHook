@@ -30,7 +30,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="8dp"
-            android:text="重打包脱壳（免root）"
+            android:text="重打包分析（免root）"
             android:textColor="@color/glass_text_primary"
             android:textSize="20sp"
             android:textStyle="bold" />
@@ -96,7 +96,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:gravity="center"
-            android:text="流程：选APK → 嵌入脱壳模块并重签名（NPatch）→ 导出 patched APK → 安装运行即自动脱壳"
+            android:text="流程：选APK → 嵌入动态分析模块并重签名（NPatch）→ 导出 patched APK → 安装运行即自动动态分析"
             android:textColor="@color/glass_text_tertiary"
             android:textSize="11sp" />
 
@@ -105,7 +105,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:gravity="center"
-            android:text="过签：Java签名API篡改返回原签名 + 读取自身APK重定向到原包副本；硬编码哈希/内存完整性校验免root无法绕过"
+            android:text="签名强度检测：Java签名API篡改返回原签名 + 读取自身APK重定向到原包副本；硬编码哈希/内存完整性校验免root无法绕过"
             android:textColor="@color/glass_text_tertiary"
             android:textSize="10sp" />
 

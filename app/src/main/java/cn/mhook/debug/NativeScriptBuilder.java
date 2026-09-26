@@ -234,7 +234,7 @@ public class NativeScriptBuilder {
                 + "  log(\"wrote \" + bytes.length + \" bytes to \" + addr);\n");
     }
 
-    /** DEX 脱壳：内存扫描 dex magic，dump 所有解密后的 dex 到目标 App 私有目录。 */
+    /** DEX 动态分析：内存扫描 dex magic，dump 所有解密后的 dex 到目标 App 私有目录。 */
     public static String dumpDex(String pkg) {
         String outDir = "/data/data/" + esc(pkg) + "/files/dexdump";
         return wrap(

@@ -31,7 +31,7 @@ public class su {
                             .execute(session);
                     initPath(context);
                 } else {
-                    // 无 root 设备静默跳过：沙箱免root脱壳不依赖 root，不再弹提示
+                    // 无 root 设备静默跳过：沙箱免root动态分析不依赖 root，不再弹提示
                 }
             }
         }).start();

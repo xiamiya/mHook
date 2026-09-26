@@ -46,16 +46,16 @@ public class mHookApplication extends Application {
             // sandbox init failure should not break the host app
         }
         // 回调列表是进程本地的：每个进程（含 :black / :p0 虚拟进程）都会执行本方法，
-        // 必须在所有进程注册，虚拟进程内虚拟应用的 Application 创建时才会触发脱壳。
+        // 必须在所有进程注册，虚拟进程内虚拟应用的 Application 创建时才会触发动态分析。
         try {
             BlackBoxCore.get().addAppLifecycleCallback(new AppLifecycleCallback() {
                 @Override
                 public void beforeApplicationOnCreate(String packageName, String processName, android.app.Application application, int userId) {
                     try {
                         if (packageName != null && packageName.equals(processName)) {
-                            // 线程名伪装：隐藏沙箱/脱壳特征线程名
+                            // 线程名伪装：隐藏沙箱/动态分析特征线程名
                             cn.mhook.mhook.xposed.dump.ThreadHider.start();
-                            // 尽早启动脱壳：即使 onCreate 后续崩溃（如加固壳动态加载失败），也能先抓到已加载的 dex
+                            // 尽早启动动态分析：即使 onCreate 后续崩溃（如加固壳动态加载失败），也能先抓到已加载的 dex
                             File outDir = new File(BlackBoxCore.getContext().getFilesDir(),
                                     "sandbox_dump" + File.separator + packageName);
                             cn.mhook.mhook.xposed.dump.SandboxDexDumper.start(outDir, application.getClassLoader(), application);

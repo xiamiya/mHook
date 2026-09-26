@@ -47,7 +47,7 @@ public class DumpAdapter extends BaseQuickAdapter<SelectAppItem, BaseViewHolder>
                     }
                 }
             }
-            String progress = "已脱壳 " + count + " 个 dex（" + formatSize(size) + "）"
+            String progress = "已动态分析 " + count + " 个 dex（" + formatSize(size) + "）"
                     + (filled > 0 ? "，补码快照 " + filled : "");
             String last = readLastEvent(new File(dumpDir, "dump_log.txt"));
             pkgView.setText("/data/mHook/" + pkg + "/dump/\n" + progress
@@ -67,7 +67,7 @@ public class DumpAdapter extends BaseQuickAdapter<SelectAppItem, BaseViewHolder>
         }
     }
 
-    /** 读取脱壳日志最后一行事件（+Ns tag: msg），带长度保护。 */
+    /** 读取分析日志最后一行事件（+Ns tag: msg），带长度保护。 */
     private static String readLastEvent(File log) {
         try {
             if (!log.exists()) return null;

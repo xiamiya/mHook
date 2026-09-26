@@ -12,7 +12,7 @@ import android.util.Log;
 /**
  * FART 式「主动加载类」：骨架 dex → 枚举全部类描述符 → 逐个 Class.forName 主动加载，
  * 触发抽取壳在运行时把真实 codeItem 补回 ArtMethod，为后续 re-dump 完整 dex 创造条件。
- * 输出类似 FART 的脱壳日志（application / appComponentFactory / 主动加载类列表）。
+ * 输出类似 FART 的分析日志（application / appComponentFactory / 主动加载类列表）。
  */
 public class ActiveClassLoader {
 
@@ -82,6 +82,13 @@ public class ActiveClassLoader {
                     }
                 }
                 sb.append(loaded ? "  ✓ " : "  . ").append(cn == null ? desc : cn).append("\n");
+            }
+            // 主动调用增强：构造器/静态/实例方法 + 周期性 CodeItem 回填
+            try {
+                long next = MethodActiveCaller.run(appClassLoader, classes, 6000, 0, outDir);
+                sb.append("****** 主动调用: 至 ").append(next).append("/").append(classes.size()).append(" *****").append((char) 10);
+            } catch (Throwable t) {
+                sb.append("(主动调用异常: ").append(t).append(")").append((char) 10);
             }
             sb.append("****** 加载成功: ").append(ok).append("/").append(classes.size())
                     .append(" 触发完毕(等待补码后由后续轮次 re-dump) *****\n");

@@ -265,7 +265,7 @@ public class GadgetManager {
         }
         su.getOutput("mkdir -p \"" + dst + "\" && cp" + toCopy + " \"" + dst + "/\""
                 + " && chmod 644 \"" + dst + "\"/*.bin");
-        // 一并导出 DEX 脱壳产物
+        // 一并导出 DEX 动态分析产物
         su.getOutput("cp -r " + src + "/dexdump \"" + dst + "/\" 2>/dev/null");
         su.getOutput("chmod -R 644 \"" + dst + "\"/dexdump 2>/dev/null");
         String ls = su.getOutput("ls -l \"" + dst + "\"");
@@ -354,7 +354,7 @@ public class GadgetManager {
         final String dir = "/proc/1/root/data/data/" + pkg + "/files/dexdump";
         String listing = su.getOutput("ls " + dir);
         if (listing == null || listing.trim().isEmpty()) {
-            log(p, "未找到 dexdump（可能尚未脱壳）");
+            log(p, "未找到 dexdump（可能尚未动态分析）");
             return null;
         }
         String stamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss").format(new java.util.Date());
@@ -398,7 +398,7 @@ public class GadgetManager {
         }
     }
 
-    /** 清理目标 App 私有目录里旧的脱壳产物。 */
+    /** 清理目标 App 私有目录里旧的动态分析产物。 */
     public static void cleanDexDump(String pkg) {
         su.getOutput("rm -rf /data/data/" + pkg + "/files/dexdump");
     }

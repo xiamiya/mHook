@@ -14,7 +14,7 @@ import dalvik.system.DexClassLoader;
 
 /**
  * 在设备端调用内置 NPatch patcher：把 DumpModule 嵌入目标 APK 并签名，
- * sigBypass 过签等级 3（Extreme）。npatch-dex.jar + 所需资源随 APK assets 打包。
+ * sigBypass 签名强度检测等级 3（Extreme）。npatch-dex.jar + 所需资源随 APK assets 打包。
  */
 public class NpatchEngine {
 
@@ -146,7 +146,7 @@ public class NpatchEngine {
     }
 
     /**
-     * 纯过签：不嵌入模块，仅用 NPatch 的 sigBypass 引擎重打包并重签名。
+     * 纯签名强度检测：不嵌入模块，仅用 NPatch 的 sigBypass 引擎重打包并重签名。
      * level：0=None 1=Basic 2=High 3=Extreme 4=Seccomp 5=Stealth。
      * 阻塞执行，返回生成的 *-npatched.apk。
      */

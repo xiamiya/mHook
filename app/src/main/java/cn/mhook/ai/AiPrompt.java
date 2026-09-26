@@ -108,7 +108,7 @@ public class AiPrompt {
             sb.append("- garlic__* 用于 APK/DEX/JAR 静态分析（反编译/call graph/DuckDB/ELF 分析），是最高效的反编译工具。\n");
             sb.append("- mt_apk_* 只做 APK 外层：mt_apk_open、mt_apk_list(view=lib/<abi> 可列 native 库)、smali/AXML 编辑、重签名打包 mt_apk_build。\n");
             sb.append("- 网络请求/接口签名分析用 ProxyPin 抓包工具，不要用静态工具猜。\n");
-            sb.append("- 玄星逆核覆盖：反编译 jadx_decompile(dex→java)/baksmali_decode(dex→smali)/apk_decode/apk_analyze；SO 静态分析 so_open→analyze_elf→analyze_functions→analyze_crypto→analysis_report；脱壳 dex_unpack（先让目标 App 运行使壳解密 dex 进内存）；回编签名 smali_assemble/apk_rebuild/apk_sign；动态 frida_control；Flutter flutter_blutter。\n");
+            sb.append("- 玄星逆核覆盖：反编译 jadx_decompile(dex→java)/baksmali_decode(dex→smali)/apk_decode/apk_analyze；SO 静态分析 so_open→analyze_elf→analyze_functions→analyze_crypto→analysis_report；动态分析 dex_unpack（先让目标 App 运行使壳解密 dex 进内存）；回编签名 smali_assemble/apk_rebuild/apk_sign；动态 frida_control；Flutter flutter_blutter。\n");
             sb.append("- 每一步都要用前序工具返回的真实 workspaceId/路径/函数定位符，不要用文字描述代替工具调用。\n");
             sb.append("- 纯分析/只读任务用 mt_apk_open(temporary=true)，结束后 mt_apk_close(workspaceId) 释放，避免缓存堆积占满磁盘。\n");
             sb.append("- 只能调用 tools 函数列表里真实存在的工具名。若某工具调用返回“服务器未启用/未找到服务器”类错误，改用上表已启用的服务器前缀重试。\n");
@@ -200,7 +200,7 @@ public class AiPrompt {
     }
 
     /**
-     * AI 脱壳：garlic 反编译 + unidbg 模拟执行 + 直接产出脱壳文件。
+     * AI 动态分析：garlic 反编译 + unidbg 模拟执行 + 直接产出动态分析文件。
      * 目标：真正还原出可用的 dex/apk 文件并落盘，不输出 JSON 契约。
      */
 

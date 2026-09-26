@@ -32,7 +32,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="8dp"
-            android:text="免root脱壳"
+            android:text="免root动态分析"
             android:textColor="@color/glass_text_primary"
             android:textSize="20sp"
             android:textStyle="bold" />
@@ -61,7 +61,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:gravity="center"
-                android:text="选择 APK 开始脱壳"
+                android:text="选择 APK 开始分析"
                 android:textColor="@color/glass_accent_orange"
                 android:textSize="15sp"
                 android:textStyle="bold" />
@@ -87,7 +87,7 @@
                 android:textSize="15sp" />
         </FrameLayout>
 
-        <!-- 脱壳日志（深色卡，占满剩余空间） -->
+        <!-- 分析日志（深色卡，占满剩余空间） -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -114,7 +114,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="8dp"
                     android:layout_weight="1"
-                    android:text="脱壳日志"
+                    android:text="分析日志"
                     android:textColor="#D9FFFFFF"
                     android:textSize="13sp"
                     android:textStyle="bold" />
@@ -145,20 +145,22 @@
                     android:fontFamily="monospace"
                     android:lineSpacingExtra="3dp"
                     android:textColor="#BFFFFFFF"
+                    android:textIsSelectable="true"
                     android:textSize="12sp" />
             </ScrollView>
         </LinearLayout>
     </LinearLayout>
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="20dp"
-        android:layout_marginRight="20dp"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="10dp"
-        android:gravity="center"
-        android:text="注：选择 APK 后自动装入沙箱静默运行并 dump dex，主动加载全部类触发补码回收，全程免root。兼容绝大多数应用，个别带强保护的加固应用可能受沙箱环境影响而无法完成，敬请谅解"
+        <TextView
+            android:id="@+id/sb_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="20dp"
+            android:layout_marginRight="20dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:gravity="center"
+            android:text="注：选择 APK 后自动装入沙箱静默运行并 dump dex，主动加载全部类触发补码回收，全程免root。兼容绝大多数应用，个别带强保护的加固应用可能受沙箱环境影响而无法完成，敬请谅解"
         android:textColor="@color/glass_text_tertiary"
         android:textSize="12sp" />
 </LinearLayout>

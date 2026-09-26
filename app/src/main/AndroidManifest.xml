@@ -43,6 +43,7 @@
         <activity android:name="cn.mhook.activity.DonateActivity" android:theme="@style/Theme.MHookGlass" />
         <activity android:name="cn.mhook.activity.UserAgreementActivity" android:theme="@style/Theme.MHookGlass" />
         <activity android:name="cn.mhook.activity.ThanksActivity" android:theme="@style/Theme.MHookGlass" />
+    <activity android:name="cn.mhook.license.LicenseActivity" android:theme="@style/Theme.MHookGlass" />
         <activity
             android:name="cn.mhook.activity.MainActivity"
             android:configChanges="uiMode"

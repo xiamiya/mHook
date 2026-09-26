@@ -433,7 +433,7 @@
                         android:clickable="true"
                         android:focusable="true"
                         android:gravity="center"
-                        android:text="一键脱壳导出DEX（自动重启App + 打包zip）"
+                        android:text="一键动态分析导出DEX（自动重启App + 打包zip）"
                         android:textColor="@color/glass_accent_green"
                         android:textSize="12sp"
                         android:textStyle="bold" />

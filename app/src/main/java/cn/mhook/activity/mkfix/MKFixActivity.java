@@ -155,7 +155,7 @@ public class MKFixActivity extends Activity {
                 } catch (Throwable ignored) {
                 }
             } else {
-                GlassToast.error(this, "添加失败：改包修复需要 root 权限写入 /data/mHook，当前设备似乎未授予 root");
+                GlassToast.error(this, "添加失败：应用修复需要 root 权限写入 /data/mHook，当前设备似乎未授予 root");
             }
             initList("");
         }

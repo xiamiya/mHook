@@ -42,9 +42,9 @@ public class HomePageBuilder {
 
         String title = "", subtitle = "";
         switch (page) {
-            case PAGE_SHELL: title = "脱壳"; subtitle = "Dump 与沙箱运行"; break;
+            case PAGE_SHELL: title = "动态分析"; subtitle = "Dump 与沙箱运行"; break;
             case PAGE_HOOK: title = "Hook"; subtitle = "注入与行为监控"; break;
-            case PAGE_PATCH: title = "改包修复"; subtitle = "热修复与自动改包"; break;
+            case PAGE_PATCH: title = "应用修复"; subtitle = "热修复与自动改包"; break;
             case PAGE_SETTINGS: title = "设置"; subtitle = "偏好与系统信息"; break;
         }
         TextView titleTv = root.findViewById(R.id.page_title);
@@ -128,25 +128,41 @@ public class HomePageBuilder {
                         R.drawable.ic_analyze, pink, "AI", blue, GlassItem.TYPE_NAV, new View.OnClickListener() {
                             @Override public void onClick(View v) { RxActivityTool.skipActivity(context, AiActivity.class); }
                         }));
-                list.add(new GlassItem("一键脱修", "选APK自动加固检测+免root脱壳重打包+过签", R.drawable.ic_fix, blue, "脱修", orange, GlassItem.TYPE_NAV, new View.OnClickListener() {
-                    @Override public void onClick(View v) { RxActivityTool.skipActivity(context, DeShellActivity.class); }
+                list.add(new GlassItem("加固强度检测", "选APK自动加固检测+免root动态分析重打包+签名强度检测", R.drawable.ic_fix, blue, "脱修", orange, GlassItem.TYPE_NAV, new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                    // 加固强度检测需授权（离线一机一码）
+                    if (cn.mhook.license.LicenseManager.isActivated(context)) {
+                        RxActivityTool.skipActivity(context, DeShellActivity.class);
+                    } else {
+                        cn.mhook.widget.GlassToast.warning(context, "该功能需要授权");
+                        RxActivityTool.skipActivity(context, cn.mhook.license.LicenseActivity.class);
+                    }
+                }
                 }));
                 break;
             case PAGE_SHELL:
             default:
-                list.add(new GlassItem("内存脱壳", "纯Java内存脱壳，dump加固后的dex",
+                list.add(new GlassItem("内存分析", "纯Java内存分析，dump加固后的dex",
                         R.drawable.ic_shield, cyan, "需Xposed", orange, GlassItem.TYPE_NAV, new View.OnClickListener() {
                             @Override public void onClick(View v) { RxActivityTool.skipActivity(context, DumpActivity.class); }
                         }));
-                list.add(new GlassItem("沙箱脱壳", "选APK自动装入沙箱运行并dump，主动加载+补码回收，全程免root",
+                list.add(new GlassItem("eBPF深度调试", "内核态 uprobe 被动抓取已执行的 dex 并回填抽取方法，适合抽取壳",
+                        R.drawable.ic_bug, violet, "需root", orange, GlassItem.TYPE_NAV, new View.OnClickListener() {
+                            @Override public void onClick(View v) {
+                                android.content.Intent i = new android.content.Intent(context, SandboxDumpActivity.class);
+                                i.putExtra("ebpf", true);
+                                context.startActivity(i);
+                            }
+                        }));
+                list.add(new GlassItem("沙箱分析", "选APK自动装入沙箱运行并dump，主动加载+补码回收，全程免root",
                         R.drawable.ic_sandbox, green, "免root", green, GlassItem.TYPE_NAV, new View.OnClickListener() {
                             @Override public void onClick(View v) { RxActivityTool.skipActivity(context, SandboxDumpActivity.class); }
                         }));
-                list.add(new GlassItem("重打包脱壳", "NPatch注入脱壳模块并重签名，安装运行即自动脱壳",
+                list.add(new GlassItem("重打包分析", "NPatch注入动态分析模块并重签名，安装运行即自动动态分析",
                         R.drawable.ic_sandbox, orange, "免root", orange, GlassItem.TYPE_NAV, new View.OnClickListener() {
                             @Override public void onClick(View v) { RxActivityTool.skipActivity(context, RootlessDumpActivity.class); }
                         }));
-                list.add(new GlassItem("过签", "选APK选模式过签并重签名，输出Download/mhook_dump",
+                list.add(new GlassItem("签名强度检测", "选APK选模式签名强度检测并重签名，输出Download/mhook_dump",
                         R.drawable.ic_shield, cyan, "免root", cyan, GlassItem.TYPE_NAV, new View.OnClickListener() {
                             @Override public void onClick(View v) { RxActivityTool.skipActivity(context, cn.mhook.activity.SignBypassActivity.class); }
                         }));

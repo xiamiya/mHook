@@ -37,6 +37,8 @@ public class SandboxDexDumper {
     private static volatile android.app.Application sApp;
 
     /** 触发延迟 dump 轮次。可安全多次调用。 */
+    private static volatile boolean sDiagLogged = false;
+
     public static void start(File outDir, ClassLoader appClassLoader) {
         start(outDir, appClassLoader, null);
     }
@@ -55,10 +57,10 @@ public class SandboxDexDumper {
             if (!outDir.exists()) outDir.mkdirs();
         } catch (Throwable ignored) {
         }
-        // 记录脱壳日志（虚拟进程内写宿主 outDir 下的 dump_log.txt，供 UI/zip 汇总）
+        // 记录分析日志（虚拟进程内写宿主 outDir 下的 dump_log.txt，供 UI/zip 汇总）
         try {
             java.util.Locale loc = java.util.Locale.US;
-            writeLog(outDir, String.format(loc, "[+%5dms] 入口: 沙箱脱壳装载 pkg/out=%s cl=%s%n",
+            writeLog(outDir, String.format(loc, "[+%5dms] 入口: 沙箱分析装载 pkg/out=%s cl=%s%n",
                     System.currentTimeMillis() & 0xFFFFFFFFL, outDir.getAbsolutePath(), startCl));
         } catch (Throwable ignored) {
         }
@@ -68,6 +70,7 @@ public class SandboxDexDumper {
         try {
             EnumStats st = dumpAllLoadedDexes(startCl);
             scanMapsForDex(st);
+            installLoadHooks(outDir, startCl);
             Log.i(TAG, "immediate dump " + st.summary());
             hookHitLog(outDir, "立即枚举", st.summary());
         } catch (Throwable ignored) {
@@ -106,6 +109,7 @@ public class SandboxDexDumper {
                                 File dir = sOutDir;
                                 EnumStats st = dumpAllLoadedDexes(cl);
                                 scanMapsForDex(st);
+                                if (round >= 3 && round % 2 == 1) carveAnonymousRegions(st);
                                 hookHitLog(dir, "定时枚举第" + round + "轮", st.summary());
                                 Log.i(TAG, "dump round " + round + " " + st.summary());
                             } catch (Throwable ignored) {
@@ -116,7 +120,16 @@ public class SandboxDexDumper {
                                 if (r > 0) Log.i(TAG, "redump round " + round + " filled=" + r);
                             } catch (Throwable ignored) {
                             }
-                            // 去重/修复/重命名：与真机 Xposed 路径同一整理器，产物统一为 classes*.dex
+                            // B-2 内存 carve 已在上面定时枚举处按轮次触发；此处不再重复
+                            // C：深度动态分析——按运行时 ArtMethod 的 CodeItem 原地回填 insns（治不回写映射区的抽取壳）
+                            if (round >= 5) {
+                                try {
+                                    int bf = CodeItemBackfiller.backfillDir(outDir, sStartCl);
+                                    if (bf > 0) Log.i(TAG, "codeitem backfill round " + round + " methods=" + bf);
+                                } catch (Throwable ignored) {
+                                }
+                            }
+                            // E：去重/修复/重命名：与真机 Xposed 路径同一整理器，产物统一为 classes*.dex
                             try {
                                 DexConsolidator.consolidate(outDir);
                             } catch (Throwable ignored) {
@@ -245,6 +258,14 @@ public class SandboxDexDumper {
         }
         byte[] data = UnsafeAccess.readArtDex(c);
         if (data == null) {
+            // 一次性诊断：打印 cookie 与各偏移探测到的指针/首 4 字节，定位是「指针无效」还是「布局不符」
+            if (!sDiagLogged) {
+                sDiagLogged = true;
+                try {
+                    hookHitLog(sOutDir, "读失败诊断", UnsafeAccess.describe(c));
+                } catch (Throwable ignored) {
+                }
+            }
             // 读取失败不能永久拉黑：壳刚启动时映射可能未就绪（这正是"定时枚举
             // 一直为 0"的主因）。登记失败次数，下轮重试；连续 10 次仍失败才放弃。
             boolean giveUp;
@@ -303,7 +324,7 @@ public class SandboxDexDumper {
             } catch (Throwable ignored) {
             }
             Log.i(TAG, "dump: " + file.getName() + " size=" + data.length);
-            // 方法体体检 + 写脱壳日志
+            // 方法体体检 + 写分析日志
             String detail = file.getName() + " size=" + data.length;
             boolean skeleton = false;
             try {
@@ -349,6 +370,225 @@ public class SandboxDexDumper {
      * 只探测每个映射区首 8 字节，开销极低；统一走 /proc/self/mem 读，
      * 避免 Unsafe 读到未映射页直接 SIGSEGV 崩掉虚拟进程。
      */
+    // ===================== B：加载点 hook + 无注入内存 carve =====================
+
+    private static volatile boolean sHooksInstalled = false;
+
+    /**
+     * B-1：加载点 hook（进程内 Xposed 可用时生效）。在构造阶段捕获原始 dex：
+     * InMemoryDexClassLoader(ByteBuffer/ByteBuffer[]) 与 DexClassLoader(dexPath)。
+     * 无框架时静默跳过，由 cookie 扫描与内存 carve 兜底。
+     */
+    private static void installLoadHooks(final File outDir, final ClassLoader cl) {
+        if (sHooksInstalled) return;
+        sHooksInstalled = true;
+        try {
+            de.robv.android.xposed.XposedBridge.hookAllConstructors(
+                    Class.forName("dalvik.system.InMemoryDexClassLoader", false, cl),
+                    new de.robv.android.xposed.XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            try {
+                                for (Object a : param.args) {
+                                    if (a instanceof java.nio.ByteBuffer) {
+                                        captureBuffer((java.nio.ByteBuffer) a);
+                                    } else if (a instanceof java.nio.ByteBuffer[]) {
+                                        for (java.nio.ByteBuffer b : (java.nio.ByteBuffer[]) a) captureBuffer(b);
+                                    }
+                                }
+                            } catch (Throwable ignored) {
+                            }
+                        }
+                    });
+            de.robv.android.xposed.XposedBridge.hookAllConstructors(
+                    Class.forName("dalvik.system.DexClassLoader", false, cl),
+                    new de.robv.android.xposed.XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            try {
+                                if (param.args.length > 0 && param.args[0] instanceof String) {
+                                    captureDexPath((String) param.args[0]);
+                                }
+                            } catch (Throwable ignored) {
+                            }
+                        }
+                    });
+            Log.i(TAG, "installLoadHooks ok");
+            hookHitLog(outDir, "加载点hook", "已安装 InMemoryDexClassLoader / DexClassLoader hook");
+        } catch (Throwable t) {
+            Log.i(TAG, "installLoadHooks skip: " + t);
+            hookHitLog(outDir, "加载点hook", "不可用（无 Xposed），改用内存 carve 兜底");
+        }
+    }
+
+    private static void captureBuffer(java.nio.ByteBuffer bb) {
+        try {
+            if (bb == null) return;
+            java.nio.ByteBuffer dup = bb.duplicate();
+            byte[] data = new byte[dup.remaining()];
+            dup.get(data);
+            int off = indexOfDexMagic(data);
+            if (off < 0) return;
+            long fs = readU32LE(data, off + 0x20);
+            long endian = readU32LE(data, off + 0x28);
+            if (fs < 0x70 || endian != 0x12345678L) return;
+            if (off + fs > data.length) return;
+            saveDex(java.util.Arrays.copyOfRange(data, off, (int) (off + fs)), 0);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static void captureDexPath(String dexPath) {
+        try {
+            if (dexPath == null) return;
+            for (String p : dexPath.split(":")) {
+                try {
+                    File f = new File(p);
+                    if (!f.exists() || f.isDirectory()) continue;
+                    if (p.endsWith(".dex")) {
+                        saveDex(readFileBytes(f), 0);
+                    } else if (p.endsWith(".jar") || p.endsWith(".apk")) {
+                        java.util.zip.ZipFile zf = new java.util.zip.ZipFile(f);
+                        try {
+                            java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
+                            while (en.hasMoreElements()) {
+                                java.util.zip.ZipEntry e = en.nextElement();
+                                if (e.getName().matches("classes\\d*\\.dex")) {
+                                    java.io.InputStream in = zf.getInputStream(e);
+                                    java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+                                    byte[] buf = new byte[65536];
+                                    int k;
+                                    while ((k = in.read(buf)) != -1) bos.write(buf, 0, k);
+                                    in.close();
+                                    saveDex(bos.toByteArray(), 0);
+                                }
+                            }
+                        } finally {
+                            zf.close();
+                        }
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static byte[] readFileBytes(File f) {
+        try (java.io.FileInputStream in = new java.io.FileInputStream(f)) {
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[65536];
+            int n;
+            while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
+            return bos.toByteArray();
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static int indexOfDexMagic(byte[] d) {
+        if (d == null) return -1;
+        for (int i = 0; i + 8 <= d.length; i++) {
+            if (d[i] == 0x64 && d[i + 1] == 0x65 && d[i + 2] == 0x78 && d[i + 3] == 0x0A) return i;
+        }
+        return -1;
+    }
+
+    private static long readU32LE(byte[] d, int off) {
+        if (d == null || off + 4 > d.length) return -1;
+        return (d[off] & 0xFFL) | ((d[off + 1] & 0xFFL) << 8) | ((d[off + 2] & 0xFFL) << 16) | ((d[off + 3] & 0xFFL) << 24);
+    }
+
+    private static long readU32At(java.io.RandomAccessFile raf, long addr) {
+        byte[] b = memRead(raf, addr, 4);
+        if (b == null) return -1;
+        return (b[0] & 0xFFL) | ((b[1] & 0xFFL) << 8) | ((b[2] & 0xFFL) << 16) | ((b[3] & 0xFFL) << 24);
+    }
+
+    /**
+     * B-2：无注入 carve —— 在匿名可写映射区（堆/解密缓冲）内搜索 dex 魔数并校验落盘，
+     * 覆盖 cookie 扫描与「映射区首魔数」漏掉的 dex（dex 被壳塞进更大缓冲区/非区首）。
+     * 单次最多扫 160MB，避免卡顿。
+     */
+    private static void carveAnonymousRegions(EnumStats st) {
+        java.io.RandomAccessFile raf;
+        try {
+            raf = new java.io.RandomAccessFile("/proc/self/mem", "r");
+        } catch (Throwable t) {
+            return;
+        }
+        long budget = 256L << 20;
+        try {
+            java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.FileReader("/proc/self/maps"), 32 * 1024);
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (budget <= 0) break;
+                try {
+                    int sp = line.indexOf(' ');
+                    if (sp <= 0) continue;
+                    int dash = line.indexOf('-');
+                    if (dash <= 0 || dash >= sp) continue;
+                    long s = Long.parseLong(line.substring(0, dash), 16);
+                    long e = Long.parseLong(line.substring(dash + 1, sp), 16);
+                    long len = e - s;
+                    if (len < 0x70 || len > (128L << 20)) continue;
+                    String rest = line.substring(sp + 1);
+                    if (!rest.startsWith("r")) continue;
+                    String path = rest.length() > 4 ? rest.substring(4).trim() : "";
+                    boolean anon = path.isEmpty() || path.startsWith("[anon") || path.equals("[heap]");
+                    if (!anon) {
+                        // 文件映射：只看应用/数据目录，跳过系统与特殊区
+                        if (path.startsWith("[")) continue;
+                        if (path.contains("/system") || path.contains("/apex") || path.contains("/vendor")
+                                || path.contains("/product") || path.contains("/system_ext")
+                                || path.contains("/data/dalvik-cache") || path.contains("/data/misc")
+                                || path.contains("/dev/")) continue;
+                    }
+                    budget -= carveRegion(raf, s, len, st);
+                } catch (Throwable ignored) {
+                }
+            }
+        } catch (Throwable ignored) {
+        } finally {
+            try {
+                raf.close();
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
+    private static int carveRegion(java.io.RandomAccessFile raf, long base, long len, EnumStats st) {
+        int step = 1 << 20;
+        int overlap = 0x100;
+        long pos = 0;
+        int read = 0;
+        while (pos < len) {
+            int want = (int) Math.min((long) step + overlap, len - pos);
+            byte[] chunk = memRead(raf, base + pos, want);
+            if (chunk != null) {
+                read += chunk.length;
+                for (int i = 0; i + 0x70 <= chunk.length; i++) {
+                    if (chunk[i] == 0x64 && chunk[i + 1] == 0x65 && chunk[i + 2] == 0x78 && chunk[i + 3] == 0x0A) {
+                        long addr = base + pos + i;
+                        long fs = readU32At(raf, addr + 0x20);
+                        long endian = readU32At(raf, addr + 0x28);
+                        if (fs < 0x70 || fs > (128L << 20) || endian != 0x12345678L) continue;
+                        byte[] data = memRead(raf, addr, (int) fs);
+                        if (data == null) continue;
+                        st.mapsScanned++;
+                        if (saveDex(data, 0)) {
+                            st.mapsSaved++;
+                            st.saved++;
+                        }
+                    }
+                }
+            }
+            pos += step;
+        }
+        return read;
+    }
+
     private static void scanMapsForDex(EnumStats st) {
         java.io.RandomAccessFile raf;
         try {
@@ -372,7 +612,7 @@ public class SandboxDexDumper {
                     if (len < 0x70 || len > (128L << 20)) continue;
                     String rest = line.substring(sp + 1);
                     if (!rest.startsWith("r")) continue;
-                    // 排除系统/启动映像：boot dex、系统库映射数量庞大且无脱壳价值
+                    // 排除系统/启动映像：boot dex、系统库映射数量庞大且无动态分析价值
                     if (rest.contains("/system") || rest.contains("/apex") || rest.contains("/vendor")
                             || rest.contains("/product") || rest.contains("/system_ext")
                             || rest.contains("/data/dalvik-cache") || rest.startsWith("[v")) {
@@ -609,11 +849,51 @@ public class SandboxDexDumper {
             return false;
         }
 
-        private static byte[] readMem(long addr, int len) {
-            if (!isReadable(addr, len)) {
-                return null;
+        /** 诊断：打印 cookie 及 0..0x40 各偏移探测到的指针与首 4 字节（magic=0xa786564）。 */
+        static String describe(long cookie) {
+            StringBuilder sb = new StringBuilder();
+            long fc = fix(cookie);
+            sb.append("cookie=0x").append(Long.toHexString(cookie))
+              .append(" fixed=0x").append(Long.toHexString(fc))
+              .append(" mapped=").append(isReadable(fc, 8) ? 1 : 0);
+            for (int off = 0; off < 0x40; off += 8) {
+                long p = readPtr(fc + off);
+                if (p == 0) {
+                    sb.append(" o").append(off).append("=0");
+                    continue;
+                }
+                long fp = fix(p);
+                int magic = readInt(fp);
+                sb.append(" o").append(off).append("=0x").append(Long.toHexString(p))
+                  .append("/m").append(Integer.toHexString(magic))
+                  .append("/r").append(isReadable(fp, 8) ? 1 : 0);
             }
-            if (unsafe != null && getLong != null) {
+            for (int off = 0; off < 0x80; off += 8) {
+                long p = readPtr(fc + off);
+                if (p == 0 || (p & 3) != 0) continue;
+                if (readInt(p) != 0x0A786564) continue;
+                long fs = readInt(p + 0x20) & 0xFFFFFFFFL;
+                long me = mapEnd(p);
+                long use = (fs < 0x70 || fs > (256L << 20)) ? (me > p ? Math.min(me - p, 256L << 20) : 0) : fs;
+                byte[] d = use >= 0x70 ? readMem(p, (int) use) : null;
+                sb.append(" [HIT off=").append(off).append(" p=0x").append(Long.toHexString(p))
+                  .append(" fs=").append(fs).append(" mapEnd=0x").append(Long.toHexString(me))
+                  .append(" use=").append(use).append(" read=").append(d == null ? "null" : String.valueOf(d.length))
+                  .append("]");
+                break;
+            }
+            return sb.toString();
+        }
+        /** 去 TBI 高位标签：Android 11+ arm64 堆指针高字节为标签(如 0xb4)，读内存前须抹掉。 */
+        private static long fix(long a) {
+            return a & 0x00FFFFFFFFFFFFL;
+        }
+        private static byte[] readMem(long addr, int len) {
+            if (addr <= 0 || len <= 0) return null;
+            addr = fix(addr);
+            // 仅当落在可读映射区时才用 Unsafe 快路径（防 SIGSEGV）；
+            // 否则不直接放弃，仍走下面安全的 /proc/self/mem 兜底（越界只会读失败，不会崩）。
+            if (isReadable(addr, len) && unsafe != null && getLong != null) {
                 try {
                     byte[] buf = new byte[len];
                     long off = addr;
@@ -637,9 +917,17 @@ public class SandboxDexDumper {
             try {
                 java.io.RandomAccessFile raf = new java.io.RandomAccessFile("/proc/self/mem", "r");
                 try {
-                    raf.seek(addr);
                     byte[] buf = new byte[len];
-                    raf.readFully(buf);
+                    int done = 0;
+                    while (done < len) {
+                        long a = addr + done;
+                        long e = mapEnd(a);
+                        if (e <= a) return null;
+                        int chunk = (int) Math.min((long) (len - done), e - a);
+                        raf.seek(a);
+                        raf.readFully(buf, done, chunk);
+                        done += chunk;
+                    }
                     return buf;
                 } finally {
                     raf.close();
@@ -647,6 +935,20 @@ public class SandboxDexDumper {
             } catch (Throwable t) {
                 return null;
             }
+        }
+
+        /** 包含 addr 的可读映射区结束地址；无则 0。用于跨映射安全按块读。 */
+        private static long mapEnd(long addr) {
+            long[][] m = sReadable;
+            if (m == null || System.currentTimeMillis() - sMapsAt > 5000) {
+                loadMaps();
+                m = sReadable;
+            }
+            if (m == null) return 0;
+            for (long[] rg : m) {
+                if (addr >= rg[0] && addr < rg[1]) return rg[1];
+            }
+            return 0;
         }
 
         private static void putLongLE(byte[] buf, int off, long v) {
@@ -662,7 +964,7 @@ public class SandboxDexDumper {
             for (int i = 7; i >= 0; i--) {
                 v = (v << 8) | (b[i] & 0xFFL);
             }
-            return v;
+            return fix(v);
         }
 
         private static int readInt(long addr) {
@@ -675,7 +977,11 @@ public class SandboxDexDumper {
             try {
                 if (readInt(p) != 0x0A786564) return null;
                 long fileSize = readInt(p + 0x20) & 0xFFFFFFFFL;
-                if (fileSize < 0x70 || fileSize > 256L * 1024 * 1024) return null;
+                if (fileSize < 0x70 || fileSize > 256L * 1024 * 1024) {
+                    long e = mapEnd(p);
+                    fileSize = e > p ? Math.min(e - p, 256L * 1024 * 1024) : 0;
+                }
+                if (fileSize < 0x70) return null;
                 return readMem(p, (int) fileSize);
             } catch (Throwable t) {
                 return null;
@@ -684,18 +990,19 @@ public class SandboxDexDumper {
 
         /** cookie points at an ArtDexFile; scan the first 0x80 bytes for dex magic. */
         static byte[] readArtDex(long cookie) {
-            try {
-                for (int off = 0; off < 0x80; off += 8) {
-                    long p = readPtr(cookie + off);
-                    if (p == 0 || (p & 3) != 0) continue;
-                    if (readInt(p) != 0x0A786564) continue;
-                    long fileSize = readInt(p + 0x20) & 0xFFFFFFFFL;
-                    if (fileSize < 0x70 || fileSize > 256L * 1024 * 1024) continue;
-                    return readMem(p, (int) fileSize);
-                }
-            } catch (Throwable t) {
-            }
-            return null;
+        long fc = fix(cookie);
+        for (int off = 0; off < 0x80; off += 8) {
+            long p = readPtr(fc + off);
+            if (p == 0 || (p & 3) != 0) continue;
+            if (readInt(p) != 0x0A786564) continue;
+            long fs = readInt(p + 0x20) & 0xFFFFFFFFL;
+            long me = mapEnd(p);
+            long use = (fs < 0x70 || fs > (256L << 20)) ? (me > p ? Math.min(me - p, 256L << 20) : 0) : fs;
+            if (use < 0x70) continue;
+            byte[] d = readMem(p, (int) use);
+            if (d != null) return d;
         }
+        return null;
+    }
     }
 }

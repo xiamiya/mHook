@@ -23,7 +23,7 @@ import static cn.mhook.mhook.xposed.utils.mHookCfg.dumpDir;
 import static cn.mhook.mhook.xposed.utils.mHookCfg.mDir;
 
 /**
- * 纯 Java 内存脱壳
+ * 纯 Java 内存分析
  *
  * 三层方案：
  * 1. hook InMemoryDexClassLoader 构造方法，直接拷贝 ByteBuffer/ByteBuffer[] 中的 dex
@@ -58,7 +58,7 @@ public class MemoryDexDumper {
 
     public static void init(final XC_LoadPackage.LoadPackageParam lpparam) {
         DumpLogger.setPkg(lpparam.packageName);
-        DumpLogger.event("入口", "Application.attachBaseContext / 脱壳模块装载, pkg=" + lpparam.packageName);
+        DumpLogger.event("入口", "Application.attachBaseContext / 动态分析模块装载, pkg=" + lpparam.packageName);
         probeLayout("DexCache");
         probeLayout("DexFile");
         hookInMemoryDexClassLoader(lpparam);
@@ -76,7 +76,7 @@ public class MemoryDexDumper {
     /**
      * 多批次 + 手动触发：后台线程持续运行，
      * 在 3/8/15/25/40/60 秒各枚举一次（抓延迟解密的壳），
-     * 并轮询 dump_now 标志文件实现 UI 的「立即脱壳」。
+     * 并轮询 dump_now 标志文件实现 UI 的「立即动态分析」。
      */
     private static void scheduleDumpAll() {
         new Thread(new Runnable() {
@@ -633,7 +633,7 @@ public class MemoryDexDumper {
         }
     }
 
-    /** 扫描 dump 目录已脱出的 dex，输出真实 Application 到 real_app.txt（与沙箱脱壳一致，供 UI/导出使用）。 */
+    /** 扫描 dump 目录已脱出的 dex，输出真实 Application 到 real_app.txt（与沙箱分析一致，供 UI/导出使用）。 */
     private static void scanAndWriteRealApp() {
         try {
             File dir = new File(dumpDir);
@@ -744,11 +744,29 @@ public class MemoryDexDumper {
             return false;
         }
 
-        private static byte[] readMem(long addr, int len) {
-            if (!isReadable(addr, len)) {
-                return null;
+        /** 去 TBI 高位标签：Android 11+ arm64 堆指针高字节为标签(如 0xb4)，读内存前须抹掉。 */
+        private static long fix(long a) {
+            return a & 0x00FFFFFFFFFFFFL;
+        }
+
+        /** 包含 addr 的可读映射区结束地址；无则 0。用于跨映射安全按块读。 */
+        private static long mapEnd(long addr) {
+            long[][] m = sReadable;
+            if (m == null || System.currentTimeMillis() - sMapsAt > 5000) {
+                loadMaps();
+                m = sReadable;
             }
-            if (unsafe != null && getLong != null) {
+            if (m == null) return 0;
+            for (long[] rg : m) {
+                if (addr >= rg[0] && addr < rg[1]) return rg[1];
+            }
+            return 0;
+        }
+        private static byte[] readMem(long addr, int len) {
+            if (addr <= 0 || len <= 0) return null;
+            addr = fix(addr);
+            // 仅当落在可读映射区时才用 Unsafe（防 SIGSEGV）；否则仍走安全的 /proc/self/mem 兜底
+            if (isReadable(addr, len) && unsafe != null && getLong != null) {
                 try {
                     byte[] buf = new byte[len];
                     long off = addr;
@@ -776,9 +794,17 @@ public class MemoryDexDumper {
             try {
                 java.io.RandomAccessFile raf = new java.io.RandomAccessFile("/proc/self/mem", "r");
                 try {
-                    raf.seek(addr);
                     byte[] buf = new byte[len];
-                    raf.readFully(buf);
+                    int done = 0;
+                    while (done < len) {
+                        long a = addr + done;
+                        long e = mapEnd(a);
+                        if (e <= a) return null;
+                        int chunk = (int) Math.min((long) (len - done), e - a);
+                        raf.seek(a);
+                        raf.readFully(buf, done, chunk);
+                        done += chunk;
+                    }
                     return buf;
                 } finally {
                     raf.close();
@@ -805,7 +831,7 @@ public class MemoryDexDumper {
             for (int i = 7; i >= 0; i--) {
                 v = (v << 8) | (b[i] & 0xFFL);
             }
-            return v;
+            return fix(v);
         }
 
         private static int readInt(long addr) {
@@ -848,7 +874,11 @@ public class MemoryDexDumper {
             try {
                 if (readInt(p) != 0x0A786564) return null;
                 long fileSize = readInt(p + 0x20) & 0xFFFFFFFFL;
-                if (fileSize < 0x70 || fileSize > 256L * 1024 * 1024) return null;
+                if (fileSize < 0x70 || fileSize > 256L * 1024 * 1024) {
+                    long e = mapEnd(p);
+                    fileSize = e > p ? Math.min(e - p, 256L * 1024 * 1024) : 0;
+                }
+                if (fileSize < 0x70) return null;
                 return readMem(p, (int) fileSize);
             } catch (Throwable t) {
                 return null;
@@ -864,7 +894,11 @@ public class MemoryDexDumper {
                     if (p == 0 || (p & 3) != 0) continue;
                     if (readInt(p) != 0x0A786564) continue;
                     long fileSize = readInt(p + 0x20) & 0xFFFFFFFFL;
-                    if (fileSize < 0x70 || fileSize > 256L * 1024 * 1024) continue;
+                    if (fileSize < 0x70 || fileSize > 256L * 1024 * 1024) {
+                    long e = mapEnd(p);
+                    fileSize = e > p ? Math.min(e - p, 256L * 1024 * 1024) : 0;
+                }
+                if (fileSize < 0x70) continue;
                     return readMem(p, (int) fileSize);
                 }
             } catch (Throwable t) {

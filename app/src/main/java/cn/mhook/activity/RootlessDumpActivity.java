@@ -24,7 +24,7 @@ import cn.mhook.npatch.NpatchEngine;
 import cn.mhook.widget.GlassToast;
 
 /**
- * 免root 重打包脱壳：选 APK → 用内置 NPatch 嵌入脱壳模块（DumpModule）并重签名（过签Lv3）→ 导出。
+ * 免root 重打包分析：选 APK → 用内置 NPatch 嵌入动态分析模块（DumpModule）并重签名（签名强度检测Lv3）→ 导出。
  */
 public class RootlessDumpActivity extends Activity {
 
@@ -126,7 +126,7 @@ public class RootlessDumpActivity extends Activity {
         }
         busy = true;
         btnStart.setEnabled(false);
-        log("\n==== 开始重打包脱壳 ====");
+        log("\n==== 开始重打包分析 ====");
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -152,7 +152,7 @@ public class RootlessDumpActivity extends Activity {
                             while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
                         }
                     }
-                    log("脱壳模块就绪");
+                    log("动态分析模块就绪");
 
                     File outDir = new File(getCacheDir(), "npatch_out");
                     final java.io.ByteArrayOutputStream errBuf = new java.io.ByteArrayOutputStream();

@@ -63,7 +63,7 @@ public class FridaTools {
                 props("filter", "string", "关键字过滤（可省略）"), null));
         arr.add(fn("frida_clear_log", "清空脚本输出日志缓冲。", null, null));
         arr.add(fn("frida_list_modules", "列出目标 App 已加载的 so 模块（名/基址/大小）。会部署脚本，需再 frida_restart_app。", null, null));
-        arr.add(fn("frida_dump_dex", "对目标 App 一键脱壳：内存扫描 dump 所有 dex 并打包 zip 到 Download/mhook_dump/（自动重启 App + 等待）。", null, null));
+        arr.add(fn("frida_dump_dex", "对目标 App 一键动态分析：内存扫描 dump 所有 dex 并打包 zip 到 Download/mhook_dump/（自动重启 App + 等待）。", null, null));
         return arr;
     }
 
@@ -205,8 +205,8 @@ public class FridaTools {
                     last = cnt;
                 }
                 java.io.File zip = GadgetManager.packageDexDump(ctx, pkg, prog);
-                return zip == null ? ("脱壳打包失败\n" + log)
-                        : ("脱壳完成 -> " + zip.getAbsolutePath() + "\n" + log);
+                return zip == null ? ("动态分析打包失败\n" + log)
+                        : ("动态分析完成 -> " + zip.getAbsolutePath() + "\n" + log);
             }
             return "[未知 frida 工具] " + name;
         } catch (Throwable t) {

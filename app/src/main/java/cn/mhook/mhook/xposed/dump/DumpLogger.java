@@ -10,7 +10,7 @@ import de.robv.android.xposed.XposedBridge;
 import static cn.mhook.mhook.xposed.utils.mHookCfg.dumpDir;
 
 /**
- * 沙盒脱壳诊断日志：事件流 + 命中统计 + 产物体检，落盘到 dumpDir/dump_log.txt。
+ * 沙盒动态分析诊断日志：事件流 + 命中统计 + 产物体检，落盘到 dumpDir/dump_log.txt。
  * 双通道：XposedBridge.log（logcat 可看）+ 追加写文件（可复制）。
  */
 public class DumpLogger {
@@ -70,7 +70,7 @@ public class DumpLogger {
     /** 写总结段到文件。 */
     public static synchronized void writeSummary() {
         StringBuilder sb = new StringBuilder();
-        sb.append("\n========== 脱壳总结 ==========\n");
+        sb.append("\n========== 动态分析总结 ==========\n");
         sb.append(String.format(Locale.US,
                 "hook命中: InMemoryDex=%d(有效%d) DexClassLoader=%d(有效%d) DexFile=%d(有效%d)%n",
                 hookInMemory, hookInMemoryValid,

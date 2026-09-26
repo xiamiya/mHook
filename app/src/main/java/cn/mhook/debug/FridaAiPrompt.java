@@ -17,7 +17,7 @@ public class FridaAiPrompt {
         sb.append("- frida_get_output(filter)：读取脚本输出（logcat tag MHKDBG）\n");
         sb.append("- frida_clear_log：清空输出日志\n");
         sb.append("- frida_list_modules：列出目标已加载的 so 模块\n");
-        sb.append("- frida_dump_dex：一键脱壳（内存扫描 dump dex 并打包 zip）\n\n");
+        sb.append("- frida_dump_dex：一键动态分析（内存扫描 dump dex 并打包 zip）\n\n");
 
         sb.append("【工作流程】\n");
         sb.append("1) 先 frida_status 了解目标；若未注入则 frida_inject。\n");

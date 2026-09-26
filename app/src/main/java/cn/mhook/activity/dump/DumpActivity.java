@@ -114,17 +114,17 @@ public class DumpActivity extends Activity {
                 }
                 final boolean on = isDumpOn(pkg);
                 new AlertDialog.Builder(DumpActivity.this)
-                        .setTitle(on ? "关闭脱壳" : "开启脱壳")
-                        .setMessage(on ? "关闭后将删除该应用的 dump 开关目录（已脱壳的 dex 也会被移除）"
-                                : "开启后重启目标应用即自动脱壳。\n\ndex 文件保存位置：\n/data/mHook/" + pkg + "/dump/")
+                        .setTitle(on ? "关闭动态分析" : "开启动态分析")
+                        .setMessage(on ? "关闭后将删除该应用的 dump 开关目录（已动态分析的 dex 也会被移除）"
+                                : "开启后重启目标应用即自动动态分析。\n\ndex 文件保存位置：\n/data/mHook/" + pkg + "/dump/")
                         .setNegativeButton("取消", null)
                         .setPositiveButton(on ? "关闭" : "开启", new android.content.DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(android.content.DialogInterface dialog, int which) {
                                 if (setDump(pkg, !on)) {
-                                    GlassToast.success(DumpActivity.this, on ? "已关闭脱壳" : "已开启脱壳，dex 保存到 /data/mHook/" + pkg + "/dump/，重启目标应用后生效");
+                                    GlassToast.success(DumpActivity.this, on ? "已关闭动态分析" : "已开启动态分析，dex 保存到 /data/mHook/" + pkg + "/dump/，重启目标应用后生效");
                                 } else {
-                                    GlassToast.warning(DumpActivity.this, "开启失败：内存脱壳需要 root 权限写入 /data/mHook，当前设备似乎未授予 root");
+                                    GlassToast.warning(DumpActivity.this, "开启失败：内存分析需要 root 权限写入 /data/mHook，当前设备似乎未授予 root");
                                 }
                                 initList("");
                                 dialog.dismiss();
@@ -169,9 +169,9 @@ public class DumpActivity extends Activity {
         if (requestCode == 9008 && resultCode == RESULT_OK) {
             String pkg = data.getStringExtra("pkg");
             if (setDump(pkg, true)) {
-                GlassToast.success(this, "已开启脱壳，重启目标应用后生效");
+                GlassToast.success(this, "已开启动态分析，重启目标应用后生效");
             } else {
-                GlassToast.warning(this, "添加失败：内存脱壳需要 root 权限写入 /data/mHook，当前设备似乎未授予 root");
+                GlassToast.warning(this, "添加失败：内存分析需要 root 权限写入 /data/mHook，当前设备似乎未授予 root");
             }
             initList("");
         }
@@ -181,19 +181,19 @@ public class DumpActivity extends Activity {
         return new File(mDir + pkg + "/dump").exists();
     }
 
-    /** 立即脱壳：向目标进程写 dump_now 触发文件，其脱壳线程会执行一次枚举。 */
+    /** 立即动态分析：向目标进程写 dump_now 触发文件，其动态分析线程会执行一次枚举。 */
     private void dumpNow(String pkg) {
         if (!isAppRunning(pkg)) {
             GlassToast.warning(this, "目标应用未运行，请先启动 " + pkg);
             return;
         }
         if (!isDumpOn(pkg)) {
-            GlassToast.warning(this, "请先开启该应用的脱壳");
+            GlassToast.warning(this, "请先开启该应用的动态分析");
             return;
         }
         exec("mkdir -p '" + mDir + pkg + "' && chmod 777 '" + mDir + pkg
                 + "' && echo 1 > '" + mDir + pkg + "/dump_now'");
-        GlassToast.success(this, "已触发立即脱壳，稍候自动刷新");
+        GlassToast.success(this, "已触发立即动态分析，稍候自动刷新");
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -202,10 +202,10 @@ public class DumpActivity extends Activity {
         }, 3000);
     }
 
-    /** 跳转脱壳目录：root 复制到 /sdcard/mHookDump/<pkg>/dump，再尝试用系统文件管理器打开。 */
+    /** 跳转分析目录：root 复制到 /sdcard/mHookDump/<pkg>/dump，再尝试用系统文件管理器打开。 */
     private void openDumpDir(final String pkg) {        final File src = new File(mDir + pkg + "/dump");
         if (!src.exists()) {
-            GlassToast.warning(this, "该应用脱壳目录不存在");
+            GlassToast.warning(this, "该应用分析目录不存在");
             return;
         }
         final File dst = new File(Environment.getExternalStorageDirectory(), "mHookDump/" + pkg + "/dump");
@@ -238,11 +238,11 @@ public class DumpActivity extends Activity {
         }).start();
     }
 
-    /** 打包脱壳产物为 zip 导出到 Download/mhook_dump/<pkg>_dump_<时间戳>.zip（含 dex + real_app.txt + 日志）。 */
+    /** 打包动态分析产物为 zip 导出到 Download/mhook_dump/<pkg>_dump_<时间戳>.zip（含 dex + real_app.txt + 日志）。 */
     private void exportZip(final String pkg) {
         final File src = new File(mDir + pkg + "/dump");
         if (!src.exists()) {
-            GlassToast.warning(this, "该应用脱壳目录不存在");
+            GlassToast.warning(this, "该应用分析目录不存在");
             return;
         }
         GlassToast.info(this, "正在打包导出...");
@@ -259,7 +259,7 @@ public class DumpActivity extends Activity {
                     java.util.List<File> all = new java.util.ArrayList<>();
                     collectFiles(cacheDir, all);
                     if (all.isEmpty()) {
-                        handler.post(() -> GlassToast.warning(DumpActivity.this, "导出失败：脱壳目录为空或非 root"));
+                        handler.post(() -> GlassToast.warning(DumpActivity.this, "导出失败：分析目录为空或非 root"));
                         return;
                     }
                     // 2) 打包 zip
@@ -350,7 +350,7 @@ public class DumpActivity extends Activity {
     private static boolean setDump(String pkg, boolean on) {
         String dir = mDir + pkg + "/dump";
         if (on) {
-            // 用 su 同步创建并设 777，确保目标应用进程能写入脱壳 dex
+            // 用 su 同步创建并设 777，确保目标应用进程能写入动态分析 dex
             exec("mkdir -p '" + dir + "' && chmod 777 '" + dir + "'");
             new File(dir).mkdirs();
         } else {

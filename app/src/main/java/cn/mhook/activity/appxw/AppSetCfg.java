@@ -61,8 +61,8 @@ public class AppSetCfg extends Activity {
         // 网络
         addSectionTitle("网络");
         addToggleRow("代理检测及屏蔽", "cProperty");
-        // 过签
-        addSectionTitle("过签");
+        // 签名强度检测
+        addSectionTitle("签名强度检测");
         addToggleRow("运行时签名绕过", "signBypass");
         addTextRow("正版签名(hex/base64)", "signBypassSig");
         addTextRow("正版APK路径(可选)", "signBypassApk");

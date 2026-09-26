@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="8dp"
             android:layout_weight="1"
-            android:text="内存脱壳"
+            android:text="内存分析"
             android:textColor="@color/glass_text_primary"
             android:textSize="20sp"
             android:textStyle="bold" />

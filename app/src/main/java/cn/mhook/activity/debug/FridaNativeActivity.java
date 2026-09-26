@@ -255,7 +255,7 @@ public class FridaNativeActivity extends Activity {
         findViewById(R.id.btn_dex_zip).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                runTask("一键脱壳导出ZIP", new Runnable() {
+                runTask("一键动态分析导出ZIP", new Runnable() {
                     @Override
                     public void run() {
                         GadgetManager.cleanDexDump(pkg);
@@ -268,7 +268,7 @@ public class FridaNativeActivity extends Activity {
                             appendLog("注入失败，已中止");
                             return;
                         }
-                        appendLog("重启目标 App 触发脱壳 ...");
+                        appendLog("重启目标 App 触发动态分析 ...");
                         GadgetManager.restartApp(pkg);
                         // 把本页拉回前台，避免等待/打包时被系统后台限制
                         try {
@@ -276,7 +276,7 @@ public class FridaNativeActivity extends Activity {
                                     + " --es pkg " + pkg + " --es name " + (appName == null ? "" : appName));
                         } catch (Throwable ignored) {
                         }
-                        appendLog("等待脱壳完成（App 会自动启动，轮询 dexdump）...");
+                        appendLog("等待动态分析完成（App 会自动启动，轮询 dexdump）...");
                         int last = -1, stable = 0;
                         for (int i = 1; i <= 60; i++) {
                             try {

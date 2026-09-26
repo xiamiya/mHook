@@ -52,7 +52,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="脱壳"
+                    android:text="动态分析"
                     android:textColor="@color/glass_text_secondary"
                     android:textSize="10sp"
                     android:textStyle="bold" />
@@ -108,7 +108,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="改包修复"
+                    android:text="应用修复"
                     android:textColor="@color/glass_text_secondary"
                     android:textSize="10sp"
                     android:textStyle="bold" />

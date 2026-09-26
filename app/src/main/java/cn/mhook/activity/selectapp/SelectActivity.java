@@ -33,6 +33,7 @@ public class SelectActivity extends Activity {
     private SwipeRefreshLayout refreshLayout;
     private Handler handler;
     private List<SelectAppItem> datas = new ArrayList<>();
+    private volatile int loadSeq = 0;
     private SetectAppAdapter adapter;
     private FloatingSearchView floatingSearchView;
     public static JSONArray ret = new JSONArray();
@@ -74,19 +75,22 @@ public class SelectActivity extends Activity {
                 initList("");
             }
         });
-        initList("");
         adapter = new SetectAppAdapter(datas);
         adapter.addChildClickViewIds(R.id.appInfoItem);
         adapter.setOnItemChildClickListener(new OnItemChildClickListener() {
             @Override
             public void onItemChildClick(@NonNull BaseQuickAdapter adapter, @NonNull View view, int position) {
+                if (position < 0 || position >= datas.size()) return;
+                SelectAppItem si = datas.get(position);
+                if (si.isHeader()) return;
                 Intent intent=new Intent();
-                intent.putExtra("pkg",datas.get(position).getPkg());
+                intent.putExtra("pkg",si.getPkg());
                 setResult(RESULT_OK,intent);
                 finish();
             }
         });
         recyclerView.setAdapter(adapter);
+        initList("");
         floatingSearchView = findViewById(R.id.floating_search_view);
         floatingSearchView.setOnQueryChangeListener(new FloatingSearchView.OnQueryChangeListener() {
             @Override
@@ -96,13 +100,13 @@ public class SelectActivity extends Activity {
         });
     }
 
-    private  void initList(final String query){
+    private void initList(final String query){
+        final int seq = ++loadSeq;
         new Thread(new Runnable(){
             @Override
             public void run(){
-                if (datas.size()>0){
-                    datas.clear();
-                }
+                // 后台只构建新列表，绝不直接改 datas（adapter 正持有它）
+                final List<SelectAppItem> newData = new ArrayList<>();
                 List<SelectAppItem> sysApps = new ArrayList<>();
                 List<SelectAppItem> userApps = new ArrayList<>();
                 PackageManager packageManager =SelectActivity.this.getPackageManager();
@@ -130,21 +134,25 @@ public class SelectActivity extends Activity {
                 Collections.sort(sysApps, NAME_COMPARATOR);
                 Collections.sort(userApps, NAME_COMPARATOR);
                 if (query.isEmpty()){
-                    datas.add(new SelectAppItem("用户应用 (" + userApps.size() + ")"));
-                    datas.addAll(userApps);
-                    datas.add(new SelectAppItem("系统应用 (" + sysApps.size() + ")"));
-                    datas.addAll(sysApps);
+                    newData.add(new SelectAppItem("用户应用 (" + userApps.size() + ")"));
+                    newData.addAll(userApps);
+                    newData.add(new SelectAppItem("系统应用 (" + sysApps.size() + ")"));
+                    newData.addAll(sysApps);
                 }else {
-                    datas.addAll(sysApps);
-                    datas.addAll(userApps);
+                    newData.addAll(sysApps);
+                    newData.addAll(userApps);
                 }
-                handler.postDelayed(new Runnable() {
+                // 回到主线程一次性替换并 notify，保证 getItemCount 与数据始终一致
+                handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        adapter.notifyDataSetChanged();
+                        if (seq != loadSeq) return;   // 已有更新的搜索，丢弃过期结果
+                        datas.clear();
+                        datas.addAll(newData);
+                        if (adapter != null) adapter.notifyDataSetChanged();
                         refreshLayout.setRefreshing(false);
                     }
-                }, 0);
+                });
             }
         }).start();
     }
