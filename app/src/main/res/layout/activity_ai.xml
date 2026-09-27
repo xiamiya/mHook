@@ -93,15 +93,15 @@
                             android:textColor="@color/glass_text_secondary"
                             android:textSize="12sp" />
 
-                        <TextView
-                            android:id="@+id/aiAppName"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="未选择（点击选择）"
-                            android:textColor="@color/glass_text_tertiary"
-                            android:textSize="15sp"
-                            android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/aiAppName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="未选择（点击选择 APK）\n提示：请将需分析应用复制到您所用的 MCP 服务器指定目录"
+                    android:textColor="@color/glass_text_tertiary"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
                     </LinearLayout>
 
                     <ImageView

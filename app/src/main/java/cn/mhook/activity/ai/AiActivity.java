@@ -25,7 +25,7 @@ import com.tamsiree.rxkit.view.RxToast;
 import java.io.File;
 
 import cn.mhook.activity.editcfg.EditHookActivity;
-import cn.mhook.activity.selectapp.SelectActivity;
+
 import cn.mhook.ai.AiClient;
 import cn.mhook.ai.AiPrompt;
 import cn.mhook.ai.AiSession;
@@ -44,6 +44,7 @@ public class AiActivity extends Activity {
     private TextView aiOutput;
     private EditText aiInput;
 
+    private static final int REQ_APK = 9101;
     private String appPkg;
     private String appName;
     private JSONObject parsed;
@@ -119,22 +120,83 @@ public class AiActivity extends Activity {
     }
 
     private void selectApp(){
-        Bundle bundle = new Bundle();
-        bundle.putString("appType", "all");
-        RxActivityTool.skipActivityForResult(AiActivity.this, SelectActivity.class, bundle, 9008);
+        // 应用分析改为「文件选择」：分析在 MCP 服务器侧进行，需要把 APK 放到服务器可读的目录
+        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType("application/vnd.android.package-archive");
+        i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
+                "application/vnd.android.package-archive", "application/octet-stream"});
+        try {
+            startActivityForResult(i, REQ_APK);
+        } catch (Throwable t) {
+            try {
+                Intent i2 = new Intent(Intent.ACTION_GET_CONTENT);
+                i2.addCategory(Intent.CATEGORY_OPENABLE);
+                i2.setType("application/vnd.android.package-archive");
+                startActivityForResult(i2, REQ_APK);
+            } catch (Throwable t2) {
+                cn.mhook.widget.GlassToast.warning(AiActivity.this, "无法打开文件选择器");
+            }
+        }
+    }
+
+    /** 读取所选 APK 的包名/应用名（不安装）。 */
+    private void handlePickedApk(final android.net.Uri uri) {
+        cn.mhook.widget.GlassToast.info(AiActivity.this, "请将需分析应用复制到您所用的 MCP 服务器指定目录");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    java.io.File tmp = new java.io.File(getCacheDir(), "ai_target_" + System.currentTimeMillis() + ".apk");
+                    try (java.io.InputStream is = getContentResolver().openInputStream(uri);
+                         java.io.FileOutputStream fos = new java.io.FileOutputStream(tmp)) {
+                        byte[] buf = new byte[65536];
+                        int n;
+                        while ((n = is.read(buf)) != -1) fos.write(buf, 0, n);
+                    }
+                    final android.content.pm.PackageInfo pi =
+                            getPackageManager().getPackageArchiveInfo(tmp.getAbsolutePath(), 0);
+                    tmp.delete();
+                    final String pkg = pi == null ? null : pi.packageName;
+                    String label = null;
+                    try {
+                        if (pi != null && pi.applicationInfo != null) {
+                            label = String.valueOf(getPackageManager().getApplicationLabel(pi.applicationInfo));
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                    final String name = (label == null || label.isEmpty()) ? (pkg == null ? "" : pkg) : label;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (pkg == null || pkg.isEmpty()) {
+                                cn.mhook.widget.GlassToast.warning(AiActivity.this, "无法解析该 APK 的包名");
+                                return;
+                            }
+                            appPkg = pkg;
+                            appName = name;
+                            aiAppName.setText(appName + "\n" + pkg
+                                    + "\n提示：请将需分析应用复制到您所用的 MCP 服务器指定目录");
+                            aiAppName.setTextColor(getResources().getColor(R.color.glass_accent_blue));
+                        }
+                    });
+                } catch (final Throwable t) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            cn.mhook.widget.GlassToast.error(AiActivity.this, "读取 APK 失败：" + t);
+                        }
+                    });
+                }
+            }
+        }).start();
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 9008 && resultCode == RESULT_OK){
-            String pkg = data.getStringExtra("pkg");
-            if (pkg != null && !pkg.isEmpty()){
-                appPkg = pkg;
-                appName = RxAppTool.getAppName(AiActivity.this, pkg);
-                aiAppName.setText(appName + "\n" + pkg);
-                aiAppName.setTextColor(getResources().getColor(R.color.glass_accent_blue));
-            }
+        if (requestCode == REQ_APK && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            handlePickedApk(data.getData());
         }
     }
 
