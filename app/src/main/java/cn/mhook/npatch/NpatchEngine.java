@@ -115,18 +115,12 @@ public class NpatchEngine {
         } catch (java.lang.reflect.InvocationTargetException e) {
             Throwable c = e.getCause() != null ? e.getCause() : e;
             StringBuilder sb = new StringBuilder(c.toString());
-            for (StackTraceElement el : c.getStackTrace()) {
-                sb.append("\n    at ").append(el);
-            }
             if (c.getCause() != null) {
                 sb.append("\nCaused by: ").append(c.getCause());
             }
             throw new Exception(sb.toString(), c);
         } catch (Throwable t) {
             StringBuilder sb = new StringBuilder(t.toString());
-            for (StackTraceElement el : t.getStackTrace()) {
-                sb.append("\n    at ").append(el);
-            }
             throw new Exception(sb.toString(), t);
         }
 
@@ -189,18 +183,12 @@ public class NpatchEngine {
         } catch (java.lang.reflect.InvocationTargetException e) {
             Throwable c = e.getCause() != null ? e.getCause() : e;
             StringBuilder sb = new StringBuilder(c.toString());
-            for (StackTraceElement el : c.getStackTrace()) {
-                sb.append("\n    at ").append(el);
-            }
             if (c.getCause() != null) {
                 sb.append("\nCaused by: ").append(c.getCause());
             }
             throw new Exception(sb.toString(), c);
         } catch (Throwable t) {
             StringBuilder sb = new StringBuilder(t.toString());
-            for (StackTraceElement el : t.getStackTrace()) {
-                sb.append("\n    at ").append(el);
-            }
             throw new Exception(sb.toString(), t);
         }
 

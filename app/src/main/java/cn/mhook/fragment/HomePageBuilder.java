@@ -37,6 +37,12 @@ public class HomePageBuilder {
     public static final int PAGE_PATCH = 2;
     public static final int PAGE_SETTINGS = 3;
 
+    /**
+     * 隐藏功能「屏幕叠加辅助」是否已解锁。
+     * 故意只放内存：进程被杀（关后台）后自动重置，需要重新在设置 Tab 连点 4 次解锁。
+     */
+    public static boolean overlayAssistUnlocked = false;
+
     public static View build(Context context, ViewGroup parent, int page) {
         View root = LayoutInflater.from(context).inflate(R.layout.fragment_home, parent, false);
 
@@ -139,6 +145,12 @@ public class HomePageBuilder {
                     }
                 }
                 }));
+                list.add(new GlassItem("应用保护", "多档位加固：混淆 / 抽取 / VMP / 反调试 / 自校验，支持自有签名",
+                        R.drawable.ic_shield, violet, "加固", orange, GlassItem.TYPE_NAV, new View.OnClickListener() {
+                            @Override public void onClick(View v) {
+                                RxActivityTool.skipActivity(context, cn.mhook.protect.ProtectActivity.class);
+                            }
+                        }));
                 break;
             case PAGE_SHELL:
             default:
@@ -179,9 +191,19 @@ public class HomePageBuilder {
         int violet = context.getResources().getColor(R.color.glass_accent_violet);
         int pink = context.getResources().getColor(R.color.glass_accent_pink);
         int orange = context.getResources().getColor(R.color.glass_accent_orange);
+        int cyan = context.getResources().getColor(R.color.glass_accent_cyan);
 
         list.add(new GlassItem("调试模式", null, R.drawable.ic_bug, red,
                 null, 0, GlassItem.TYPE_TOGGLE, null));
+        // 隐藏功能：在设置 Tab 连点 4 次后出现
+        if (overlayAssistUnlocked) {
+            list.add(new GlassItem("屏幕叠加辅助", "无障碍截图 + 悬浮窗绘制（实验）",
+                    R.drawable.ic_analyze, cyan, null, 0, GlassItem.TYPE_NAV, new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            RxActivityTool.skipActivity(context, cn.mhook.overlay.OverlayAssistActivity.class);
+                        }
+                    }));
+        }
         list.add(new GlassItem("检测更新", version, R.drawable.ic_fix, blue,
                 null, 0, GlassItem.TYPE_NAV, new View.OnClickListener() {
                     @Override public void onClick(View v) {
@@ -209,6 +231,10 @@ public class HomePageBuilder {
         list.add(new GlassItem("推介-智盾加固", "为你的app保驾护航", R.drawable.ic_shield, violet,
                 null, 0, GlassItem.TYPE_NAV, new View.OnClickListener() {
                     @Override public void onClick(View v) { openUrl(context, "https://zdcod.com"); }
+                }));
+        list.add(new GlassItem("推介-HookNext", "基于 LSPosed 的安卓 Hook 工具", R.drawable.ic_hook, blue,
+                null, 0, GlassItem.TYPE_NAV, new View.OnClickListener() {
+                    @Override public void onClick(View v) { openUrl(context, "https://hooknext.me"); }
                 }));
         list.add(new GlassItem("打赏支持", null, R.drawable.ic_gift, orange,
                 null, 0, GlassItem.TYPE_NAV, new View.OnClickListener() {

@@ -39,6 +39,8 @@ public class MainActivity extends Activity {
     public static Activity activity;
     private int currentPage = 0;
     private ViewPager2 viewPager;
+    /** 「设置」Tab 连续点击次数：连点 4 次解锁隐藏功能（内存态，关后台即失效）。 */
+    private int settingsTapStreak = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +67,9 @@ public class MainActivity extends Activity {
             @Override
             public void onPageSelected(int position) {
                 currentPage = position;
+                if (position != HomePageBuilder.PAGE_SETTINGS) {
+                    settingsTapStreak = 0;   // 离开设置页则连点计数清零
+                }
                 updateTabUi(position);
             }
         });
@@ -96,9 +101,31 @@ public class MainActivity extends Activity {
             tab.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    if (index == HomePageBuilder.PAGE_SETTINGS) {
+                        settingsTapStreak++;
+                        if (settingsTapStreak >= 4 && !HomePageBuilder.overlayAssistUnlocked) {
+                            HomePageBuilder.overlayAssistUnlocked = true;
+                            rebuildPage(HomePageBuilder.PAGE_SETTINGS);
+                            cn.mhook.widget.GlassToast.success(MainActivity.this, "已解锁隐藏功能");
+                        }
+                    } else {
+                        settingsTapStreak = 0;
+                    }
                     selectPage(index);
                 }
             });
+        }
+    }
+
+    /** 重新构建某一页（用于解锁隐藏功能后刷新设置页）。 */
+    private void rebuildPage(int index) {
+        if (index < 0 || index >= pages.size()) {
+            return;
+        }
+        View page = HomePageBuilder.build(this, viewPager, index);
+        pages.set(index, page);
+        if (viewPager.getAdapter() != null) {
+            viewPager.getAdapter().notifyItemChanged(index);
         }
     }
 

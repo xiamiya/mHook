@@ -43,6 +43,17 @@
         <activity android:name="cn.mhook.activity.DonateActivity" android:theme="@style/Theme.MHookGlass" />
         <activity android:name="cn.mhook.activity.UserAgreementActivity" android:theme="@style/Theme.MHookGlass" />
         <activity android:name="cn.mhook.activity.ThanksActivity" android:theme="@style/Theme.MHookGlass" />
+        <activity android:name="cn.mhook.overlay.OverlayAssistActivity" android:theme="@style/Theme.MHookGlass" />
+        <service android:name="cn.mhook.overlay.AssistService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_assist" />
+        </service>
+
     <activity android:name="cn.mhook.license.LicenseActivity" android:theme="@style/Theme.MHookGlass" />
         <activity
             android:name="cn.mhook.activity.MainActivity"
@@ -58,6 +69,7 @@
         <activity android:name="cn.mhook.activity.selectapp.SelectActivity" android:theme="@style/Theme.MHookGlass" />
         <activity android:name="cn.mhook.activity.mkfix.MKFixActivity" android:theme="@style/Theme.MHookGlass" />
         <activity android:name="cn.mhook.activity.DeShellActivity" android:theme="@style/Theme.MHookGlass" />
+        <activity android:name="cn.mhook.protect.ProtectActivity" android:theme="@style/Theme.MHookGlass" />
         <activity android:name="cn.mhook.activity.IoConfigActivity" android:theme="@style/Theme.MHookGlass" />
         <activity android:name="cn.mhook.activity.dump.DumpActivity" android:theme="@style/Theme.MHookGlass" />
         <activity android:name="cn.mhook.activity.SandboxDumpActivity" android:theme="@style/Theme.MHookGlass" />

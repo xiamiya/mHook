@@ -184,7 +184,7 @@ public class AiActivity extends Activity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            cn.mhook.widget.GlassToast.error(AiActivity.this, "读取 APK 失败：" + t);
+                            cn.mhook.widget.GlassToast.error(AiActivity.this, "读取 APK 失败");
                         }
                     });
                 }

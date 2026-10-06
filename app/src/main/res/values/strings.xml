@@ -18,4 +18,5 @@
     <string name="please_grant_permissions">请授予权限,以确保应用正常运行</string>
     <string name="ok">确定</string>
     <string name="cancel">取消</string>
+    <string name="assist_desc">屏幕叠加辅助：读取屏幕画面以在本机叠加绘制瞄准延长线（个人自用，不修改任何应用）</string>
 </resources>

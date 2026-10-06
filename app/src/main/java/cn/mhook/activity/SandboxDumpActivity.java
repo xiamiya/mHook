@@ -269,8 +269,8 @@ public class SandboxDumpActivity extends Activity {
                     handler.post(new Runnable() {
                         @Override
                         public void run() {
-                            setStatus("eBPF 失败：" + t);
-                            logLine("错误：" + t);
+                            setStatus(cn.mhook.npatch.Err.brief(t));
+                            logLine(cn.mhook.npatch.Err.brief(t));
                             reset();
                         }
                     });
@@ -425,8 +425,8 @@ final InstallResult result = BlackBoxCore.get().installPackageAsUser(apkFile, 0)
                     handler.post(new Runnable() {
                         @Override
                         public void run() {
-                            setStatus("操作失败：" + t);
-                            logLine("错误：" + t);
+                            setStatus(cn.mhook.npatch.Err.brief(t));
+                            logLine(cn.mhook.npatch.Err.brief(t));
                             reset();
                         }
                     });
