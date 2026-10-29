@@ -1,0 +1,9 @@
+{
+  "version": "2.1.8",
+  "name": "mhook_v2.1.8",
+  "notes": "修复检测更新 403（改用 CDN 元数据，不再依赖 GitHub API 限流）",
+  "url": "https://github.com/xiamiya/mHook/releases/download/v2.1.8/mhook_v2.1.8.apk",
+  "size": 58555344,
+  "published_at": "2026-10-29T20:10:00Z",
+  "page": "https://github.com/xiamiya/mHook/releases/tag/v2.1.8"
+}
