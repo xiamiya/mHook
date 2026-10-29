@@ -1,9 +1,9 @@
 {
-  "version": "2.1.7",
-  "name": "mhook_v2.1.7",
-  "notes": "优化fux过签方式",
-  "url": "https://github.com/xiamiya/mHook/releases/download/v2.1.7/mhook_v2.1.7.apk",
-  "size": 58555344,
-  "published_at": "2026-10-29T20:25:00Z",
-  "page": "https://github.com/xiamiya/mHook/releases/tag/v2.1.7"
+  "version": "2.1.8",
+  "name": "mhook_v2.1.8",
+  "notes": "修复过签包的兼容性",
+  "url": "https://github.com/xiamiya/mHook/releases/download/v2.1.8/mhook_v2.1.8.apk",
+  "size": 58560832,
+  "published_at": "2026-10-29T22:15:00Z",
+  "page": "https://github.com/xiamiya/mHook/releases/tag/v2.1.8"
 }
